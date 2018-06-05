@@ -368,3 +368,15 @@ double PairPolir::single(int i, int j, int itype, int jtype, double rsq,
 
   return factor_polir*phi*r16inv;
 }
+
+/* ---------------------------------------------------------------------- */
+
+void *PairPolir::extract(const char *str, int &dim)
+{
+  dim = 4;
+  if (strcmp(str,"c16") == 0) return (void *) c16;
+  if (strcmp(str,"c14") == 0) return (void *) c14;
+  if (strcmp(str,"c12") == 0) return (void *) c12;
+  if (strcmp(str,"c6") == 0) return (void *) c6;
+  return NULL;
+}
