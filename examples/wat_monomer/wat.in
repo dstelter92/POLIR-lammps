@@ -1,0 +1,32 @@
+units real
+atom_style full
+
+bond_style table linear 301
+pair_style polir 6.0
+
+neigh_modify every 1 delay 1
+neighbor 0.3 bin
+
+read_data "1wat.data"
+
+# No non-bonded interactions
+pair_coeff 1 1 7.61978e-09 -4.07504e-07 5.80846e-06 -0.00292171
+pair_coeff 1 2 0.0 0.0 0.0 0.0
+pair_coeff 2 2 0.0 0.0 0.0 0.0
+
+bond_coeff 1 PS_bond_potential.table POLIR
+
+timestep 1.0
+
+variable temp equal 300.0
+velocity all create ${temp} 1091823 rot yes dist gaussian
+fix f1 all nvt temp ${temp} ${temp} 1000.0
+
+thermo 10
+thermo_style custom step temp press pe ebond ke 
+
+dump d1 all dcd 10 dump.dcd
+dump_modify d1 unwrap yes
+
+run 1000
+quit
