@@ -1,0 +1,8 @@
+# Ignore all LAMMPS dump files
+*.dcd
+*.psf
+
+# Submission scripts
+run.sh
+
+
