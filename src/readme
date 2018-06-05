@@ -1,0 +1,10 @@
+See original work: 
+Mankoo, P. K., & Keyes, T. (2008). POLIR: Polarizable, flexible, transferable
+water potential optimized for IR spectroscopy. Journal of Chemical Physics,
+129(3). https://doi.org/10.1063/1.2948966
+
+pair_polir is the pairwise O-O potential to attract waters, all other nonbonded
+interactions are electrostatic.
+
+O-H bond potential uses a 'table' style. The tabulated potential can be found in
+examples/USER-POLIR/PS_bond_potential.table
