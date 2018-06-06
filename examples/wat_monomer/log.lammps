@@ -1,5 +1,6 @@
 LAMMPS (11 May 2018)
-  using 4 OpenMP thread(s) per MPI task
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:87)
+  using 1 OpenMP thread(s) per MPI task
 units real
 atom_style full
 
@@ -60,7 +61,7 @@ Neighbor list info ...
       pair build: half/bin/newton
       stencil: half/bin/3d/newton
       bin: standard
-Per MPI rank memory allocation (min/avg/max) = 8.604 | 8.604 | 8.604 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 5.96 | 5.96 | 5.96 Mbytes
 Step Temp Press PotEng E_bond KinEng 
        0          300   -6596.9138   0.30156863   0.30156919     1.788486 
       10    300.97635    5573.5275   0.23289986   0.23290042    1.7943067 
@@ -163,21 +164,21 @@ Step Temp Press PotEng E_bond KinEng
      980    397.91714    8185.7164   0.20203349   0.20203405    2.3722308 
      990    180.11983    28599.616    2.0752463    2.0752468     1.073806 
     1000    37.182571    37266.695    3.4961621    3.4961626   0.22166837 
-Loop time of 0.00680804 on 4 procs for 1000 steps with 3 atoms
+Loop time of 0.00701594 on 1 procs for 1000 steps with 3 atoms
 
-Performance: 12690.873 ns/day, 0.002 hours/ns, 146885.099 timesteps/s
-23.8% CPU use with 1 MPI tasks x 4 OpenMP threads
+Performance: 12314.808 ns/day, 0.002 hours/ns, 142532.504 timesteps/s
+50.0% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 0.00077248 | 0.00077248 | 0.00077248 |   0.0 | 11.35
-Bond    | 8.75e-05   | 8.75e-05   | 8.75e-05   |   0.0 |  1.29
-Neigh   | 0.00011396 | 0.00011396 | 0.00011396 |   0.0 |  1.67
-Comm    | 0.00090623 | 0.00090623 | 0.00090623 |   0.0 | 13.31
-Output  | 0.0039179  | 0.0039179  | 0.0039179  |   0.0 | 57.55
-Modify  | 0.00050831 | 0.00050831 | 0.00050831 |   0.0 |  7.47
-Other   |            | 0.0005016  |            |       |  7.37
+Pair    | 0.0008738  | 0.0008738  | 0.0008738  |   0.0 | 12.45
+Bond    | 0.00012136 | 0.00012136 | 0.00012136 |   0.0 |  1.73
+Neigh   | 0.00010729 | 0.00010729 | 0.00010729 |   0.0 |  1.53
+Comm    | 0.0010505  | 0.0010505  | 0.0010505  |   0.0 | 14.97
+Output  | 0.0040536  | 0.0040536  | 0.0040536  |   0.0 | 57.78
+Modify  | 0.00052762 | 0.00052762 | 0.00052762 |   0.0 |  7.52
+Other   |            | 0.0002818  |            |       |  4.02
 
 Nlocal:    3 ave 3 max 3 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
