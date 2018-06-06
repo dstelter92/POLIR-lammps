@@ -4,7 +4,7 @@ units real
 atom_style full
 
 bond_style table linear 301
-pair_style polir 6.0
+pair_style polir/vdw 6.0
 
 neigh_modify every 1 delay 1
 neighbor 0.3 bin
@@ -55,7 +55,7 @@ Neighbor list info ...
   ghost atom cutoff = 6.3
   binsize = 3.15, bins = 2 2 2
   1 neighbor lists, perpetual/occasional/extra = 1 0 0
-  (1) pair polir, perpetual
+  (1) pair polir/vdw, perpetual
       attributes: half, newton on
       pair build: half/bin/newton
       stencil: half/bin/3d/newton
@@ -163,21 +163,21 @@ Step Temp Press PotEng E_bond KinEng
      980    397.91714    8185.7164   0.20203349   0.20203405    2.3722308 
      990    180.11983    28599.616    2.0752463    2.0752468     1.073806 
     1000    37.182571    37266.695    3.4961621    3.4961626   0.22166837 
-Loop time of 0.00709414 on 4 procs for 1000 steps with 3 atoms
+Loop time of 0.00680804 on 4 procs for 1000 steps with 3 atoms
 
-Performance: 12179.058 ns/day, 0.002 hours/ns, 140961.317 timesteps/s
-50.1% CPU use with 1 MPI tasks x 4 OpenMP threads
+Performance: 12690.873 ns/day, 0.002 hours/ns, 146885.099 timesteps/s
+23.8% CPU use with 1 MPI tasks x 4 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 0.00081635 | 0.00081635 | 0.00081635 |   0.0 | 11.51
-Bond    | 0.00012088 | 0.00012088 | 0.00012088 |   0.0 |  1.70
-Neigh   | 0.00010943 | 0.00010943 | 0.00010943 |   0.0 |  1.54
-Comm    | 0.00091934 | 0.00091934 | 0.00091934 |   0.0 | 12.96
-Output  | 0.0040383  | 0.0040383  | 0.0040383  |   0.0 | 56.92
-Modify  | 0.00055456 | 0.00055456 | 0.00055456 |   0.0 |  7.82
-Other   |            | 0.0005352  |            |       |  7.54
+Pair    | 0.00077248 | 0.00077248 | 0.00077248 |   0.0 | 11.35
+Bond    | 8.75e-05   | 8.75e-05   | 8.75e-05   |   0.0 |  1.29
+Neigh   | 0.00011396 | 0.00011396 | 0.00011396 |   0.0 |  1.67
+Comm    | 0.00090623 | 0.00090623 | 0.00090623 |   0.0 | 13.31
+Output  | 0.0039179  | 0.0039179  | 0.0039179  |   0.0 | 57.55
+Modify  | 0.00050831 | 0.00050831 | 0.00050831 |   0.0 |  7.47
+Other   |            | 0.0005016  |            |       |  7.37
 
 Nlocal:    3 ave 3 max 3 min
 Histogram: 1 0 0 0 0 0 0 0 0 0

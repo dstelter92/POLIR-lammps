@@ -2,7 +2,7 @@ units real
 atom_style full
 
 bond_style table linear 301
-pair_style polir 6.0
+pair_style polir/vdw 6.0
 
 neigh_modify every 1 delay 1
 neighbor 0.3 bin
