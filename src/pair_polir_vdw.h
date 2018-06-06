@@ -13,7 +13,7 @@
 
 #ifdef PAIR_CLASS
 
-PairStyle(polir,PairPolir)
+PairStyle(polir/vdw,PairPolirVdw)
 
 #else
 
@@ -24,10 +24,10 @@ PairStyle(polir,PairPolir)
 
 namespace LAMMPS_NS {
 
-class PairPolir : public Pair {
+class PairPolirVdw : public Pair {
  public:
-  PairPolir(class LAMMPS *);
-  virtual ~PairPolir();
+  PairPolirVdw(class LAMMPS *);
+  virtual ~PairPolirVdw();
   virtual void compute(int, int);
   void settings(int, char **);
   void coeff(int, char **);

@@ -30,14 +30,14 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairPolir::PairPolir(LAMMPS *lmp) : Pair(lmp)
+PairPolirVdw::PairPolirVdw(LAMMPS *lmp) : Pair(lmp)
 {
   writedata = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
-PairPolir::~PairPolir()
+PairPolirVdw::~PairPolirVdw()
 {
   if (allocated) {
     memory->destroy(setflag);
@@ -57,11 +57,11 @@ PairPolir::~PairPolir()
 
 /* ---------------------------------------------------------------------- */
 
-void PairPolir::compute(int eflag, int vflag)
+void PairPolirVdw::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum,itype,jtype;
   double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
-  double rsq,r,r4,r10,r16inv,r17inv,forcepolir,factor_polir;
+  double rsq,r,r4,r10,r16inv,r17inv,forcepolirvdw,factor_polir_vdw;
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
@@ -93,7 +93,7 @@ void PairPolir::compute(int eflag, int vflag)
 
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
-      factor_polir = special_lj[sbmask(j)];
+      factor_polir_vdw = special_lj[sbmask(j)];
       j &= NEIGHMASK;
 
       delx = xtmp - x[j][0];
@@ -111,7 +111,7 @@ void PairPolir::compute(int eflag, int vflag)
 
         fpair = polir1[itype][jtype] + polir2[itype][jtype]*rsq + 
           polir3[itype][jtype]*r4 + polir4[itype][jtype]*r10;
-        fpair *= factor_polir*r17inv;
+        fpair *= factor_polir_vdw*r17inv;
 
         f[i][0] += delx*fpair;
         f[i][1] += dely*fpair;
@@ -125,7 +125,7 @@ void PairPolir::compute(int eflag, int vflag)
         if (eflag) {
           evdwl = c16[itype][jtype] + c14[itype][jtype]*rsq + 
             c12[itype][jtype]*r4 + c6[itype][jtype]*r10;
-          evdwl *= factor_polir*r16inv;
+          evdwl *= factor_polir_vdw*r16inv;
         }
 
         if (evflag) ev_tally(i,j,nlocal,newton_pair,
@@ -140,7 +140,7 @@ void PairPolir::compute(int eflag, int vflag)
    allocate all arrays
 ------------------------------------------------------------------------- */
 
-void PairPolir::allocate()
+void PairPolirVdw::allocate()
 {
   allocated = 1;
   int n = atom->ntypes;
@@ -167,7 +167,7 @@ void PairPolir::allocate()
    global settings
 ------------------------------------------------------------------------- */
 
-void PairPolir::settings(int narg, char **arg)
+void PairPolirVdw::settings(int narg, char **arg)
 {
   if (narg != 1) error->all(FLERR,"Illegal pair_style command");
 
@@ -187,7 +187,7 @@ void PairPolir::settings(int narg, char **arg)
    set coeffs for one or more type pairs
 ------------------------------------------------------------------------- */
 
-void PairPolir::coeff(int narg, char **arg)
+void PairPolirVdw::coeff(int narg, char **arg)
 {
   if (narg < 6 || narg > 7)
     error->all(FLERR,"Incorrect args for pair coefficients");
@@ -225,7 +225,7 @@ void PairPolir::coeff(int narg, char **arg)
    init for one type pair i,j and corresponding j,i
 ------------------------------------------------------------------------- */
 
-double PairPolir::init_one(int i, int j)
+double PairPolirVdw::init_one(int i, int j)
 {
   if (setflag[i][j] == 0) error->all(FLERR,"All pair coeffs are not set");
 
@@ -247,7 +247,7 @@ double PairPolir::init_one(int i, int j)
    proc 0 writes to restart file
 ------------------------------------------------------------------------- */
 
-void PairPolir::write_restart(FILE *fp)
+void PairPolirVdw::write_restart(FILE *fp)
 {
   write_restart_settings(fp);
 
@@ -269,7 +269,7 @@ void PairPolir::write_restart(FILE *fp)
    proc 0 reads from restart file, bcasts
 ------------------------------------------------------------------------- */
 
-void PairPolir::read_restart(FILE *fp)
+void PairPolirVdw::read_restart(FILE *fp)
 {
   read_restart_settings(fp);
   allocate();
@@ -301,7 +301,7 @@ void PairPolir::read_restart(FILE *fp)
    proc 0 writes to restart file
 ------------------------------------------------------------------------- */
 
-void PairPolir::write_restart_settings(FILE *fp)
+void PairPolirVdw::write_restart_settings(FILE *fp)
 {
   fwrite(&cut_global,sizeof(double),1,fp);
   fwrite(&mix_flag,sizeof(int),1,fp);
@@ -311,7 +311,7 @@ void PairPolir::write_restart_settings(FILE *fp)
    proc 0 reads from restart file, bcasts
 ------------------------------------------------------------------------- */
 
-void PairPolir::read_restart_settings(FILE *fp)
+void PairPolirVdw::read_restart_settings(FILE *fp)
 {
   int me = comm->me;
   if (me == 0) {
@@ -326,7 +326,7 @@ void PairPolir::read_restart_settings(FILE *fp)
    proc 0 writes to data file
 ------------------------------------------------------------------------- */
 
-void PairPolir::write_data(FILE *fp)
+void PairPolirVdw::write_data(FILE *fp)
 {
   for (int i = 1; i <= atom->ntypes; i++)
     fprintf(fp,"%d %g %g %g %g\n",i,c16[i][i],c14[i][i],c12[i][i],c6[i][i]);
@@ -336,7 +336,7 @@ void PairPolir::write_data(FILE *fp)
    proc 0 writes all pairs to data file
 ------------------------------------------------------------------------- */
 
-void PairPolir::write_data_all(FILE *fp)
+void PairPolirVdw::write_data_all(FILE *fp)
 {
   for (int i = 1; i <= atom->ntypes; i++)
     for (int j = i; j <= atom->ntypes; j++)
@@ -346,11 +346,11 @@ void PairPolir::write_data_all(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double PairPolir::single(int i, int j, int itype, int jtype, double rsq,
-                            double factor_coul, double factor_polir,
+double PairPolirVdw::single(int i, int j, int itype, int jtype, double rsq,
+                            double factor_coul, double factor_polir_vdw,
                             double &fforce)
 {
-  double forcepolir,phi;
+  double forcepolirvdw,phi;
   double r,r4,r10,r16inv,r17inv;
 
   r = sqrt(rsq);
@@ -359,19 +359,19 @@ double PairPolir::single(int i, int j, int itype, int jtype, double rsq,
   r16inv = 1.0/(r10*r4*rsq);
   r17inv = 1.0/(r10*r4*rsq*r);
 
-  forcepolir = polir1[itype][jtype] + polir2[itype][jtype]*rsq + 
+  forcepolirvdw = polir1[itype][jtype] + polir2[itype][jtype]*rsq + 
       polir3[itype][jtype]*r4 + polir4[itype][jtype]*r10;
-  forcepolir *= factor_polir*r17inv;
+  forcepolirvdw *= factor_polir_vdw*r17inv;
 
   phi = c16[itype][jtype] + c14[itype][jtype]*rsq + 
     c12[itype][jtype]*r4 + c6[itype][jtype]*r10;
 
-  return factor_polir*phi*r16inv;
+  return factor_polir_vdw*phi*r16inv;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void *PairPolir::extract(const char *str, int &dim)
+void *PairPolirVdw::extract(const char *str, int &dim)
 {
   dim = 4;
   if (strcmp(str,"c16") == 0) return (void *) c16;
