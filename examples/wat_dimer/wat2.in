@@ -22,11 +22,13 @@ variable temp equal 300.0
 velocity all create ${temp} 1091823 rot yes dist gaussian
 fix f1 all nvt temp ${temp} ${temp} 1000.0
 
-thermo 10
+thermo 1
 thermo_style custom step temp press pe ebond ke 
 
 dump d1 all dcd 10 dump.dcd
 dump_modify d1 unwrap yes
 
-run 1000
+fix 1 all polir 0.42 0.96 0.120 -0.136
+
+run 5
 quit
