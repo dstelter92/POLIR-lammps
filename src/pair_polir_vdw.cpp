@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include "pair_polir.h"
+#include "pair_polir_vdw.h"
 #include "atom.h"
 #include "comm.h"
 #include "force.h"

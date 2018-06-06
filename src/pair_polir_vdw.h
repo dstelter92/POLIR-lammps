@@ -17,8 +17,8 @@ PairStyle(polir/vdw,PairPolirVdw)
 
 #else
 
-#ifndef LMP_PAIR_POLIR_H
-#define LMP_PAIR_POLIR_H
+#ifndef LMP_PAIR_POLIR_VDW_H
+#define LMP_PAIR_POLIR_VDW_H
 
 #include "pair.h"
 
@@ -66,10 +66,5 @@ command-line option when running LAMMPS to see the offending line.
 E: Incorrect args for pair coefficients
 
 Self-explanatory.  Check the input script or data file.
-
-E: Pair cutoff < Respa interior cutoff
-
-One or more pairwise cutoffs are too short to use with the specified
-rRESPA cutoffs.
 
 */
