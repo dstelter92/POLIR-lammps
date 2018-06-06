@@ -7,7 +7,7 @@ pair_style polir/vdw 6.0
 neigh_modify every 1 delay 1
 neighbor 0.3 bin
 
-read_data "125wat.data"
+read_data "2wat.data"
 
 # VdW interactions
 pair_coeff 1 1 7.61978e-09 -4.07504e-07 5.80846e-06 -0.00292171
