@@ -1,6 +1,5 @@
 LAMMPS (11 May 2018)
-OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:87)
-  using 1 OpenMP thread(s) per MPI task
+  using 4 OpenMP thread(s) per MPI task
 units real
 atom_style full
 
@@ -48,6 +47,55 @@ thermo_style custom step temp press pe ebond ke
 dump d1 all dcd 10 dump.dcd
 dump_modify d1 unwrap yes
 
-fix 1 all polir 0.42 0.96 0.120 -0.136
-ERROR: Illegal fix polir command (../fix_polir.cpp:54)
-Last command: fix 1 all polir 0.42 0.96 0.120 -0.136
+fix 1 all polir 2 1 0.42 0.96 0.120 -0.136
+
+run 5
+Neighbor list info ...
+  update every 1 steps, delay 1 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 6.3
+  ghost atom cutoff = 6.3
+  binsize = 3.15, bins = 1 1 1
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair polir/vdw, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 8.657 | 8.657 | 8.657 Mbytes
+Step Temp Press PotEng E_bond KinEng 
+       0          300    -59573.38   0.60257214   0.60313839    4.4712151 
+       1    220.60449   -124614.14    2.3802419    2.3808083    3.2879004 
+       2    283.88123    -37963.54    1.0231307    1.0236976    4.2309801 
+       3     282.7296    102280.13   0.99164369   0.99221093    4.2138161 
+       4    241.69822    111636.09    1.9628306    1.9633985    3.6022824 
+       5    305.84331   -35106.237   0.51370352   0.51427276     4.558304 
+Loop time of 0.000481129 on 4 procs for 5 steps with 6 atoms
+
+Performance: 897.889 ns/day, 0.027 hours/ns, 10392.230 timesteps/s
+50.1% CPU use with 1 MPI tasks x 4 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.00024438 | 0.00024438 | 0.00024438 |   0.0 | 50.79
+Bond    | 2.861e-06  | 2.861e-06  | 2.861e-06  |   0.0 |  0.59
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 2.6941e-05 | 2.6941e-05 | 2.6941e-05 |   0.0 |  5.60
+Output  | 3.6955e-05 | 3.6955e-05 | 3.6955e-05 |   0.0 |  7.68
+Modify  | 0.00016284 | 0.00016284 | 0.00016284 |   0.0 | 33.85
+Other   |            | 7.153e-06  |            |       |  1.49
+
+Nlocal:    6 ave 6 max 6 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    940 ave 940 max 940 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    682 ave 682 max 682 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 682
+Ave neighs/atom = 113.667
+Ave special neighs/atom = 2
+Neighbor list builds = 0
+Dangerous builds = 0
+quit
