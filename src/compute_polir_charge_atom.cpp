@@ -27,10 +27,13 @@
 #include "kspace.h"
 #include "modify.h"
 #include "fix.h"
+#include "domain.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
+
+#define DEBUG 0
 
 /* ---------------------------------------------------------------------- */
 
@@ -50,6 +53,8 @@ ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg
   c3 = force->numeric(FLERR,arg[8]);
 
   nmax = 0;
+  if (DEBUG)
+    fprintf(screen,"DEBUG-mode for compute polir/charge/atom is ON\n");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -86,96 +91,90 @@ void ComputePolirChargeAtom::compute_peratom()
   }
 
   int i,n,i1,i2,j1,j2;
-  int mol,last_molid;
-  double delix,deliy,deliz,deljx,deljy,deljz;
-  double rsq,roh,roh_other;
-  double qh,qo;
+  int nb,mol,last_molid;
+  double delx,dely,delz,rsq,roh1,roh2;
+  double qh1,qh2,qo;
 
   double **x = atom->x;
+  int **bond_type = atom->bond_type;
   int *type = atom->type;
+  int nlocal = atom->nlocal;
+  int *num_bond = atom->num_bond;
+  int *mask = atom->mask;
+  int newton_bond = force->newton_bond;
+  tagint **bond_atom = atom->bond_atom;
   tagint *molid = atom->molecule;
-
-  int nbondlist = neighbor->nbondlist;
-  int **bondlist = neighbor->bondlist;
+  tagint *tag = atom->tag;
 
   // clear local qpolir array
   for (i=0; i<nmax; i++) qpolir[i] = 0.0;
 
-  for (n=0; n<nbondlist; n++) {
-    // indicies for this bond 
-    i1 = bondlist[n][0];
-    i2 = bondlist[n][1];
-    // indicies for partner bond (in same H2O molec)
-    if (n == 0) {
-      j1 = bondlist[n+1][0];
-      j2 = bondlist[n+1][1];
+  for (i=0; i<nlocal; i++) {
+    if (mask[i] & groupbit) {
+
+      // Get local atoms that are O and have 2 bonds, skip others
+      nb = num_bond[i];
+      if ((nb != 2) && (type[i] != typeO))
+        continue;
+    
+      // atom indices (H atoms) bonded to n
+      i1 = atom->map(bond_atom[i][0]);
+      i2 = atom->map(bond_atom[i][1]);
+      if (DEBUG)
+        fprintf(screen,"atoms: O:%d H1:%d H2:%d\n",i,i1,i2);
+
+      if ((type[i1] != typeH) || (type[i2] != typeH))
+        error->all(FLERR,"Atom types do not match those specified in compute");
+
+      mol = molid[i];
+      if ((molid[i1] != molid[i]) || (molid[i2] != molid[i])) {
+        error->all(FLERR,"Atoms within same bond do not belong to the same molid,"
+            "an accurate LAMMPS data file with moleculeIDs is needed");
+      }
+
+      // Catches from compute/bond/local, not sure if needed
+      if (i1 < 0 || !(mask[i1] & groupbit)) continue;
+      if (i2 < 0 || !(mask[i2] & groupbit)) continue;
+      if (newton_bond == 0 && tag[i] > tag[i1]) continue;
+      if (newton_bond == 0 && tag[i] > tag[i2]) continue;
+
+      // get bond lengths, roh and roh_other
+      delx = x[i][0] - x[i1][0];
+      dely = x[i][1] - x[i1][1];
+      delz = x[i][2] - x[i1][2];
+      domain->minimum_image(delx,dely,delz);
+      rsq = delx*delx + dely*dely + delz*delz;
+      roh1 = sqrt(rsq);
+
+      delx = x[i][0] - x[i2][0];
+      dely = x[i][1] - x[i2][1];
+      delz = x[i][2] - x[i2][2];
+      domain->minimum_image(delx,dely,delz);
+      rsq = delx*delx + dely*dely + delz*delz;
+      roh2 = sqrt(rsq);
+
+      if (DEBUG)
+        fprintf(screen,"molid:%d rOH1=%g, rOH2=%g\n",molid[i],roh1,roh2);
+
+      // calc charges based on bond lengths
+      qh1 = qeH;
+      qh1 += c1*(roh1 + roh2 - (2*reOH));
+      qh1 += c3*(roh1 - roh2);
+
+      qh2 = qeH;
+      qh2 += c1*(roh1 + roh2 - (2*reOH));
+      qh2 += c3*(roh2 - roh1);
+
+      qo = -(qh1 + qh2);
+    
+      // Save to qpolir array
+      qpolir[i] = qo;
+      qpolir[i1] = qh1;
+      qpolir[i2] = qh2;
+      if (DEBUG)
+        fprintf(screen,"qo=%g, qh1=%g qh2=%g\n",qo,qh1,qh2);
+
     }
-    else {
-      j1 = bondlist[n-1][0];
-      j2 = bondlist[n-1][1];
-   }
-
-    mol = molid[i1]; // set this molecule id
-
-    // sanity check on bonds
-    if ((molid[i1] != molid[i2]) || (molid[j1] != molid[j2])) {
-      error->all(FLERR,"Atoms within bond do not belong to same molid,"
-          "accurate LAMMPS data file is needed");
-    }
-
-    // Check other neighboring bonds if wrong on 1st guess
-    if ((molid[i1] != molid[j1]) && (n>0)) {
-      j1 = bondlist[n+1][0];
-      j2 = bondlist[n+1][1];
-    }
-
-    // Kill if cannot find bond in same molid
-    if (molid[i1] != molid[j1])
-      error->all(FLERR,"Unable to identify bondlength for charge calculation");
-
-    // get bond lengths, roh and roh_other
-    delix = x[i1][0] - x[i2][0];
-    deliy = x[i1][1] - x[i2][1];
-    deliz = x[i1][2] - x[i2][2];
-    rsq = delix*delix + deliy*deliy + deliz*deliz;
-    roh = sqrt(rsq);
-
-    deljx = x[j1][0] - x[j2][0];
-    deljy = x[j1][1] - x[j2][1];
-    deljz = x[j1][2] - x[j2][2];
-    rsq = deljx*deljx + deljy*deljy + deljz*deljz;
-    roh_other = sqrt(rsq);
-    //fprintf(screen,"molid:%d MyOH:%g, otherOH:%g\n",molid[i1],roh,roh_other);
-
-    // reset charges
-    qh = 0.0;
-    if (mol != last_molid)
-      qo = 0.0;
-
-    // Check atom types, calc charges based on bond lengths
-    // Save to qpolir array
-    if (type[i1] == typeH) {
-      qh = qeH;
-      qh += c1*(roh + roh_other - (2*reOH));
-      qh += c3*(roh - roh_other);
-      qo += -qh;
-
-      qpolir[i1] = qh;
-      qpolir[i2] = qo;
-    }
-    else if (type[i2] == typeH) {
-      qh = qeH;
-      qh += c1*(roh + roh_other - (2*reOH));
-      qh += c3*(roh - roh_other);
-      qo += -qh;
-
-      qpolir[i2] = qh;
-      qpolir[i1] = qo;
-    }
-    else
-      error->all(FLERR,"No input atom types match existing types");
-
-    last_molid = mol; // set current molid as last_molid
   }
 }
 

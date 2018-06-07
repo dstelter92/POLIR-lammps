@@ -45,6 +45,7 @@ using namespace FixConst;
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
 #define INVOKED_PERATOM 1
+#define DEBUG 1
 
 /* ---------------------------------------------------------------------- */
 
@@ -62,6 +63,8 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
   c1 = force->numeric(FLERR,arg[7]);
   c3 = force->numeric(FLERR,arg[8]);
 
+  if (DEBUG)
+    fprintf(screen,"DEBUG-mode for fix polir is ON\n");
 }
 
 /* ---------------------------------------------------------------------- */
