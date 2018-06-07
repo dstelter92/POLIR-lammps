@@ -30,5 +30,5 @@ dump_modify d1 unwrap yes
 
 fix 1 all polir 2 1 0.42 0.96 0.120 -0.136
 
-run 5
+run 1
 quit
