@@ -37,6 +37,3 @@ tabulated file is found in the examples directory as "PS_bond_potential.table"
 [ ] Test against previous work
 
 
-## Known Issues:
-
-None, but code is unfinished.

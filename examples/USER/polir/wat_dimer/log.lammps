@@ -1,0 +1,53 @@
+LAMMPS (11 May 2018)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:87)
+  using 1 OpenMP thread(s) per MPI task
+units real
+atom_style full
+
+bond_style table linear 301
+pair_style polir/vdw 6.0
+
+neigh_modify every 1 delay 1
+neighbor 0.3 bin
+
+read_data "2wat.data"
+  orthogonal box = (0 0 0) to (3 3 3)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  6 atoms
+  scanning bonds ...
+  2 = max bonds/atom
+  reading bonds ...
+  4 bonds
+  2 = max # of 1-2 neighbors
+  1 = max # of 1-3 neighbors
+  1 = max # of 1-4 neighbors
+  2 = max # of special neighbors
+
+# VdW interactions
+pair_coeff 1 1 7.61978e-09 -4.07504e-07 5.80846e-06 -0.00292171
+pair_coeff 1 2 0.0 0.0 0.0 0.0
+pair_coeff 2 2 0.0 0.0 0.0 0.0
+
+bond_coeff 1 PS_bond_potential.table POLIR
+WARNING: 5 of 301 force values in table are inconsistent with -dE/dr.
+  Should only be flagged at inflection points (../bond_table.cpp:380)
+
+timestep 1.0
+
+variable temp equal 300.0
+velocity all create ${temp} 1091823 rot yes dist gaussian
+velocity all create 300 1091823 rot yes dist gaussian
+fix f1 all nvt temp ${temp} ${temp} 1000.0
+fix f1 all nvt temp 300 ${temp} 1000.0
+fix f1 all nvt temp 300 300 1000.0
+
+thermo 1
+thermo_style custom step temp press pe ebond ke
+
+dump d1 all dcd 10 dump.dcd
+dump_modify d1 unwrap yes
+
+fix 1 all polir 0.42 0.96 0.120 -0.136
+ERROR: Illegal fix polir command (../fix_polir.cpp:54)
+Last command: fix 1 all polir 0.42 0.96 0.120 -0.136
