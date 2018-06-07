@@ -1,5 +1,6 @@
 LAMMPS (11 May 2018)
-  using 4 OpenMP thread(s) per MPI task
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (../comm.cpp:87)
+  using 1 OpenMP thread(s) per MPI task
 units real
 atom_style full
 
@@ -11,7 +12,7 @@ neighbor 0.3 bin
 
 read_data "2wat.data"
   orthogonal box = (0 0 0) to (3 3 3)
-  1 by 1 by 1 MPI processor grid
+  1 by 1 by 2 MPI processor grid
   reading atoms ...
   6 atoms
   scanning bonds ...
@@ -62,7 +63,7 @@ Neighbor list info ...
       pair build: half/bin/newton
       stencil: half/bin/3d/newton
       bin: standard
-Per MPI rank memory allocation (min/avg/max) = 8.657 | 8.657 | 8.657 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 6.024 | 6.207 | 6.389 Mbytes
 Step Temp Press PotEng E_bond KinEng 
        0          300    -59573.38   0.60257214   0.60313839    4.4712151 
        1    220.60449   -124614.14    2.3802419    2.3808083    3.2879004 
@@ -70,28 +71,28 @@ Step Temp Press PotEng E_bond KinEng
        3     282.7296    102280.13   0.99164369   0.99221093    4.2138161 
        4    241.69822    111636.09    1.9628306    1.9633985    3.6022824 
        5    305.84331   -35106.237   0.51370352   0.51427276     4.558304 
-Loop time of 0.000481129 on 4 procs for 5 steps with 6 atoms
+Loop time of 0.000355005 on 2 procs for 5 steps with 6 atoms
 
-Performance: 897.889 ns/day, 0.027 hours/ns, 10392.230 timesteps/s
-50.1% CPU use with 1 MPI tasks x 4 OpenMP threads
+Performance: 1216.883 ns/day, 0.020 hours/ns, 14084.298 timesteps/s
+62.7% CPU use with 2 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 0.00024438 | 0.00024438 | 0.00024438 |   0.0 | 50.79
-Bond    | 2.861e-06  | 2.861e-06  | 2.861e-06  |   0.0 |  0.59
+Pair    | 0.00013208 | 0.00013769 | 0.00014329 |   0.0 | 38.78
+Bond    | 9.5367e-07 | 9.5367e-07 | 9.5367e-07 |   0.0 |  0.27
 Neigh   | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 2.6941e-05 | 2.6941e-05 | 2.6941e-05 |   0.0 |  5.60
-Output  | 3.6955e-05 | 3.6955e-05 | 3.6955e-05 |   0.0 |  7.68
-Modify  | 0.00016284 | 0.00016284 | 0.00016284 |   0.0 | 33.85
-Other   |            | 7.153e-06  |            |       |  1.49
+Comm    | 8.297e-05  | 8.9884e-05 | 9.6798e-05 |   0.0 | 25.32
+Output  | 2.1696e-05 | 2.6345e-05 | 3.0994e-05 |   0.0 |  7.42
+Modify  | 8.9169e-05 | 9.0122e-05 | 9.1076e-05 |   0.0 | 25.39
+Other   |            | 1.001e-05  |            |       |  2.82
 
-Nlocal:    6 ave 6 max 6 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Nghost:    940 ave 940 max 940 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Neighs:    682 ave 682 max 682 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Nlocal:    3 ave 4 max 2 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Nghost:    822 ave 828 max 816 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
+Neighs:    341 ave 395 max 287 min
+Histogram: 1 0 0 0 0 0 0 0 0 1
 
 Total # of neighbors = 682
 Ave neighs/atom = 113.667
