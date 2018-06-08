@@ -44,11 +44,28 @@ class FixPolir : public Fix {
   int typeO;                        // type index of O
   double qeH;                       // equilibrium charge
   double reOH;                      // equilibrium O-H bond length
-  double c1;                        // 1st coeff for charge-dep bonds
-  double c3;                        // 2nd coeff for charge-dep bonds
+  double uH;                        // H dipole along HOH bisector pointing to H
+  double uO;                        // O dipole in HOH plane along O->H bond
+  double alphaH;                    // polarizibility for type H
+  double alphaO;                    // polarizibility for type O
+
+  double c1;              // 1st coeff for charge-dep bonds
+  double c3;              // 2nd coeff for charge-dep bonds
+  double CD_intra_OH;     // Thole damping coeff, charge-dipole intramolecular O-H
+  double CD_intra_HH;     // Thole damping coeff, charge-dipole intramolecular H-H
+  double DD_intra_OH;     // Thole damping coeff, dipole-dipole intramolecular O-H
+  double DD_intra_HH;     // Thole damping coeff, dipole-dipole intramolecular H-H
+  double CC_inter;        // Thole damping coeff, charge-charge intermolecular
+  double CD_inter;        // Thole damping coeff, charge-dipole intermolecular
+  double DD_inter;        // Thole damping coeff, dipole-dipole intermolecular
   
+  int polir_output;
   int q_compute_id;
   char * id_q;
+
+  double *charges;
+
+  int me_universe,nworlds,iworld,me;
 };
 
 }
