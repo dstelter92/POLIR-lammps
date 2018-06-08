@@ -177,6 +177,7 @@ void FixPolir::pre_force(int vflag)
   double *charges = compute_pca->vector_atom;
 
   for (i=0; i<nlocal; i++)
+    if (mask[i] & groupbit) 
     fprintf(screen,"atom%d:%g\n",i,charges[i]);
 
 }

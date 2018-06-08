@@ -90,13 +90,15 @@ void ComputePolirChargeAtom::compute_peratom()
     vector_atom = qpolir;
   }
 
-  int i,n,i1,i2,j1,j2;
+  if (!atom->molecular)
+    error->all(FLERR,"Atom style must include molecule IDs");
+
+  int i,i1,i2;
   int nb,mol,last_molid;
   double delx,dely,delz,rsq,roh1,roh2;
   double qh1,qh2,qo;
 
   double **x = atom->x;
-  int **bond_type = atom->bond_type;
   int *type = atom->type;
   int nlocal = atom->nlocal;
   int *num_bond = atom->num_bond;
@@ -105,6 +107,7 @@ void ComputePolirChargeAtom::compute_peratom()
   tagint **bond_atom = atom->bond_atom;
   tagint *molid = atom->molecule;
   tagint *tag = atom->tag;
+
 
   // clear local qpolir array
   for (i=0; i<nmax; i++) qpolir[i] = 0.0;
