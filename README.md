@@ -37,3 +37,7 @@ tabulated file is found in the examples directory as "PS_bond_potential.table"
 [ ] Test against previous work
 
 
+
+## Issues:
+
+Currently only works with 1 MPI rank.

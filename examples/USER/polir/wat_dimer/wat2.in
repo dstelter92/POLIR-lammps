@@ -28,7 +28,7 @@ thermo_style custom step temp press pe ebond ke
 dump d1 all dcd 10 dump.dcd
 dump_modify d1 unwrap yes
 
-fix 1 all polir 2 1 0.42 0.96 0.120 -0.136
+fix 1 all polir 2 1 0.42 0.96 0.0172 0.0296 0.471 1.365
 
 run 1
 quit
