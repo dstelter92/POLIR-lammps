@@ -35,6 +35,8 @@ class FixPolir : public Fix {
   void pre_force(int);
   void post_force(int);
   void end_of_step();
+  void allocate();
+  double memory_usage();
 
  private:
   Compute *compute_pca;
@@ -63,6 +65,7 @@ class FixPolir : public Fix {
   int q_compute_id;
   char * id_q;
 
+  double *global_vector;
   double *charges;
 
   int me_universe,nworlds,iworld,me;

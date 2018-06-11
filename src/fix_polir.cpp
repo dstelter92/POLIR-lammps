@@ -43,8 +43,8 @@ using namespace FixConst;
 
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
-#define INVOKED_PERATOM 1
-#define DEBUG 1
+#define INVOKED_LOCAL 1
+#define POLIR_DEBUG 1
 
 /* ---------------------------------------------------------------------- */
 
@@ -53,7 +53,7 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 {
   if (narg != 11) error->all(FLERR,"Illegal fix polir command");
 
-  peratom_flag = 1;
+  local_flag = 1;
 
   typeH = force->inumeric(FLERR,arg[3]);  // atom type for H
   typeO = force->inumeric(FLERR,arg[4]);  // atom type for O
@@ -70,7 +70,7 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
   if ((comm->me == 0) && (logfile)) 
     polir_output = 1;
 
-  if (DEBUG) {
+  if (POLIR_DEBUG) {
     if (comm->me == 0)
       fprintf(screen,"DEBUG-mode for fix polir is ON\n");
   }
@@ -118,19 +118,19 @@ void FixPolir::init()
   CD_inter = 0.15;
   DD_inter = 0.30;
 
-
-  memory->create(charges,nmax,"polir:charges");
-
   // MPI init
   me_universe = universe->me;
   MPI_Comm_rank(world,&me);
   nworlds = universe->nworlds;
   iworld = universe->iworld;
+  
+  // memory management
+  memory->create(charges,nmax,"polir:charges");
 
   // Search for charge compute
   q_compute_id = -1;
   for (i=0; i<modify->ncompute; i++) {
-    if (strcmp(modify->compute[i]->style,"polir/charge/local") == 0) {
+    if (strcmp(modify->compute[i]->style,"polir/charge/atom") == 0) {
       q_compute_id = i;
       break;
     }
@@ -140,7 +140,7 @@ void FixPolir::init()
     int n = strlen(id) + 4;
     id_q = new char[n];
     strcpy(id_q,id);
-    strcat(id_q,"_polir_charge_local");
+    strcat(id_q,"_polir_charge_atom");
     char param1[50];
     snprintf(param1,50,"%d",typeH);
     char param2[50];
@@ -157,7 +157,7 @@ void FixPolir::init()
     char **newarg = new char*[9];
     newarg[0] = id_q;
     newarg[1] = group->names[igroup];
-    newarg[2] = (char *) "polir/charge/local";
+    newarg[2] = (char *) "polir/charge/atom";
     newarg[3] = param1;
     newarg[4] = param2;
     newarg[5] = param3;
@@ -184,7 +184,7 @@ void FixPolir::setup(int vflag)
     post_force(vflag);
 
     // Invoke compute to run on each step
-    compute_pca->invoked_flag |= INVOKED_PERATOM;
+    compute_pca->invoked_flag |= INVOKED_LOCAL;
     modify->addstep_compute(update->ntimestep + 1);
   }
   else
@@ -204,17 +204,23 @@ void FixPolir::pre_force(int vflag)
 {
   int i;
   int *mask = atom->mask;
+  int *tag = atom->tag;
   int nlocal = atom->nlocal;
   int nmax = atom->nmax;
 
   // Re-calculate atomic charges, invoke per-atom fix
-  compute_pca->compute_local();
-  charges = compute_pca->vector_local;
-  //MPI_Bcast(charges,nmax,MPI_INT,0,world);
+  compute_pca->compute_peratom();
+  charges = compute_pca->vector_atom;
+  /*
+   MPI_Allgather(charges,nmax,MPI_DOUBLE,global_vector,nmax*nworlds,
+      MPI_DOUBLE,world);
+  */
 
+  //fprintf(screen,"nlocal=%d\n",nlocal);
   for (i=0; i<nlocal; i++) {
-    if (mask[i] & groupbit) 
-      fprintf(screen,"atom%d:%g\n",i,charges[i]);
+    if (mask[i] & groupbit) {
+      fprintf(screen,"proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+    }
   }
 
 }
@@ -236,4 +242,23 @@ void FixPolir::end_of_step()
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
 
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixPolir::allocate()
+{
+  int nmax = atom->nmax;
+  memory->destroy(charges);
+  memory->create(charges,nmax,"polir:charges");
+}
+
+/* ---------------------------------------------------------------------- */
+
+double FixPolir::memory_usage()
+{
+  int nmax = atom->nmax;
+  double bytes = nmax*1 * sizeof(double);
+  bytes += nmax*nworlds*1 * sizeof(double);
+  return bytes;
 }
