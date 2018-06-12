@@ -46,9 +46,11 @@ thermo_style custom step temp press pe ebond ke
 dump d1 all dcd 10 dump.dcd
 dump_modify d1 unwrap yes
 
+dump d2 all custom 10 debug.info id type mol proc q
+
 fix 1 all polir 2 1 0.42 0.96 0.0172 0.0296 0.471 1.365
 
-run 1
+run 10
 Neighbor list info ...
   update every 1 steps, delay 1 steps, check yes
   max neighbors/atom: 2000, page size: 100000
@@ -61,43 +63,52 @@ Neighbor list info ...
       pair build: half/bin/newton
       stencil: half/bin/3d/newton
       bin: standard
-  (2) compute polir/charge/atom, occasional
+  (2) compute polir/thole/local, occasional
       attributes: full, newton on
       pair build: full/bin
       stencil: full/bin/3d
       bin: standard
-Per MPI rank memory allocation (min/avg/max) = 6.644 | 6.644 | 6.644 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 7.894 | 7.894 | 7.894 Mbytes
 Step Temp Press PotEng E_bond KinEng 
        0          300    -59573.38   0.60257214   0.60313839    4.4712151 
        1    220.60449   -124614.14    2.3802419    2.3808083    3.2879004 
-Loop time of 0.000386 on 1 procs for 1 steps with 6 atoms
+       2    283.88123    -37963.54    1.0231307    1.0236976    4.2309801 
+       3     282.7296    102280.13   0.99164369   0.99221093    4.2138161 
+       4    241.69822    111636.09    1.9628306    1.9633985    3.6022824 
+       5    305.84331   -35106.237   0.51370352   0.51427276     4.558304 
+       6    228.68132   -126879.15    2.2223965    2.2229675    3.4082778 
+       7    266.84307   -61758.433    1.4231162    1.4236888    3.9770426 
+       8    297.20898    84188.241   0.72609472   0.72666852    4.4296176 
+       9    234.63379     126992.7    2.1373616     2.137937    3.4969938 
+      10    303.73634   -9128.1156   0.49091243   0.49149051    4.5269017 
+Loop time of 0.000967979 on 1 procs for 10 steps with 6 atoms
 
-Performance: 223.834 ns/day, 0.107 hours/ns, 2590.676 timesteps/s
+Performance: 892.581 ns/day, 0.027 hours/ns, 10330.798 timesteps/s
 0.0% CPU use with 1 MPI tasks x no OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 7.7963e-05 | 7.7963e-05 | 7.7963e-05 |   0.0 | 20.20
-Bond    | 9.5367e-07 | 9.5367e-07 | 9.5367e-07 |   0.0 |  0.25
-Neigh   | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 1.1206e-05 | 1.1206e-05 | 1.1206e-05 |   0.0 |  2.90
-Output  | 1.0014e-05 | 1.0014e-05 | 1.0014e-05 |   0.0 |  2.59
-Modify  | 0.00028181 | 0.00028181 | 0.00028181 |   0.0 | 73.01
-Other   |            | 4.053e-06  |            |       |  1.05
+Pair    | 0.00050139 | 0.00050139 | 0.00050139 |   0.0 | 51.80
+Bond    | 2.1458e-06 | 2.1458e-06 | 2.1458e-06 |   0.0 |  0.22
+Neigh   | 5.0068e-05 | 5.0068e-05 | 5.0068e-05 |   0.0 |  5.17
+Comm    | 5.9605e-05 | 5.9605e-05 | 5.9605e-05 |   0.0 |  6.16
+Output  | 7.3195e-05 | 7.3195e-05 | 7.3195e-05 |   0.0 |  7.56
+Modify  | 0.00027108 | 0.00027108 | 0.00027108 |   0.0 | 28.00
+Other   |            | 1.049e-05  |            |       |  1.08
 
 Nlocal:    6 ave 6 max 6 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
-Nghost:    940 ave 940 max 940 min
+Nghost:    995 ave 995 max 995 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
-Neighs:    682 ave 682 max 682 min
+Neighs:    675 ave 675 max 675 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
-FullNghs:  1366 ave 1366 max 1366 min
+FullNghs:  0 ave 0 max 0 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 
-Total # of neighbors = 1366
-Ave neighs/atom = 227.667
+Total # of neighbors = 675
+Ave neighs/atom = 112.5
 Ave special neighs/atom = 2
-Neighbor list builds = 0
+Neighbor list builds = 1
 Dangerous builds = 0
 quit
