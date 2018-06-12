@@ -23,10 +23,6 @@
 #include "force.h"
 #include "pair.h"
 #include "modify.h"
-#include "neighbor.h"
-#include "neigh_list.h"
-#include "neigh_request.h"
-#include "fix.h"
 #include "domain.h"
 #include "memory.h"
 #include "error.h"
@@ -38,8 +34,7 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg),
-  list(NULL)
+  Compute(lmp, narg, arg)
 {
   if (narg != 9) error->all(FLERR,"Illegal compute polir/charge/atom command");
 
@@ -81,26 +76,10 @@ void ComputePolirChargeAtom::init()
   if (count > 1 && comm->me == 0)
     error->warning(FLERR,"More than one compute polir/charge/atom");
 
-  // need occasional full neighbor list
-  
-  int irequest = neighbor->request(this,instance_me);
-  neighbor->requests[irequest]->pair = 0;
-  neighbor->requests[irequest]->compute = 1;
-  neighbor->requests[irequest]->half = 0;
-  neighbor->requests[irequest]->full = 1;
-  neighbor->requests[irequest]->occasional = 1;
-
   memory->create(qpolir,nmax,"polir/charge/atom:qpolir");
   memory->create(qH,nmax,"polir/charge/atom:qH");
   memory->create(qO,nmax,"polir/charge/atom:qO");
   memory->create(roh,nmax,2,"polir/charge/atom:roh");
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ComputePolirChargeAtom::init_list(int id, NeighList *ptr)
-{
-  list = ptr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -118,13 +97,7 @@ void ComputePolirChargeAtom::compute_peratom()
   if (!atom->molecular)
     error->all(FLERR,"Atom style must include molecule IDs");
 
-  // invoke neighbor list build/copy
-  neighbor->build_one(list);
-
   //comm->coord2proc_setup();
-
-  int inum = list->inum;
-  int *ilist = list->ilist;
 
   int i,ii,j,n,nb,j1,j2;
   int partner,igx,igy,igz;
@@ -151,7 +124,6 @@ void ComputePolirChargeAtom::compute_peratom()
 
   // Loop over all neighbors
   for (i=0; i<nlocal; i++) {
-    //i = ilist[ii];
     if (!(mask[i] & groupbit)) continue;
     nb = num_bond[i];
 

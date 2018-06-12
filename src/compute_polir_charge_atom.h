@@ -29,9 +29,7 @@ class ComputePolirChargeAtom : public Compute {
   ComputePolirChargeAtom(class LAMMPS *, int, char **);
   ~ComputePolirChargeAtom();
   void init();
-  void init_list(int, class NeighList *);
   void compute_peratom();
-  void allocate();
   double memory_usage();
 
  private:
@@ -43,6 +41,8 @@ class ComputePolirChargeAtom : public Compute {
   double *qH;
   double *qO;
   double **roh;
+  
+  void allocate();
 };
 
 }
