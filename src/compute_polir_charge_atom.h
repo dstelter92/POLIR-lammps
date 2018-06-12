@@ -33,7 +33,6 @@ class ComputePolirChargeAtom : public Compute {
   double memory_usage();
 
  private:
-  class NeighList *list;
   int me,np;
   int nmax,typeH,typeO;
   double c1,c3,qeH,reOH;
