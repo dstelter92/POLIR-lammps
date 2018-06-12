@@ -43,7 +43,7 @@ using namespace FixConst;
 
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
-#define INVOKED_LOCAL 1
+#define INVOKED 1
 #define POLIR_DEBUG 0
 
 /* ---------------------------------------------------------------------- */
@@ -118,6 +118,8 @@ void FixPolir::init()
   // see fix_polir.h for details
 
   // Thole damping parameters
+  // these are NOT inputs to fix/polir since they are constant
+  // in the model. Only requires small changes if the model is improved
   CD_intra_OH = 0.650;
   CD_intra_HH = 0.050;
   DD_intra_OH = 0.690;
@@ -132,10 +134,8 @@ void FixPolir::init()
 
 
   // MPI init
-  me_universe = universe->me;
   MPI_Comm_rank(world,&me);
-  nworlds = universe->nworlds;
-  iworld = universe->iworld;
+  MPI_Comm_size(world,&nprocs);
   
   // memory management
   memory->create(charges,nmax,"polir:charges");
@@ -230,9 +230,6 @@ void FixPolir::init()
   }
   compute_thole = modify->compute[thole_compute_id];
 
-
-  // Thole damping coeff
-  // see compute/polir/thole/local
 }
 
 /* ---------------------------------------------------------------------- */
@@ -242,8 +239,9 @@ void FixPolir::setup(int vflag)
   if (strstr(update->integrate_style,"verlet")) {
     post_force(vflag);
 
-    // Invoke compute to run on each step
-    compute_pca->invoked_flag |= INVOKED_LOCAL;
+    // Invoke all computes to run on each step
+    compute_pca->invoked_flag |= INVOKED;
+    compute_thole->invoked_flag |= INVOKED;
     modify->addstep_compute(update->ntimestep + 1);
   }
   else
@@ -268,6 +266,8 @@ void FixPolir::pre_force(int vflag)
 
   nlocal = atom->nlocal;
   nmax = atom->nmax;
+
+  allocate();
 
   // Re-calculate atomic charges based on changes from last step
   // invoke per-atom fix
@@ -294,6 +294,8 @@ void FixPolir::post_force(int vflag)
   
   nlocal = atom->nlocal;
   nmax = atom->nmax;
+  
+  allocate();
 
 }
 
@@ -322,6 +324,5 @@ double FixPolir::memory_usage()
 {
   int nmax = atom->nmax;
   double bytes = nmax*1 * sizeof(double);
-  bytes += nmax*nworlds*1 * sizeof(double);
   return bytes;
 }

@@ -64,16 +64,18 @@ class FixPolir : public Fix {
   double CD_inter;        // Thole damping coeff, charge-dipole intermolecular
   double DD_inter;        // Thole damping coeff, dipole-dipole intermolecular
   
-  int polir_output,count;
+  int me,nprocs;
+  int nlocal,nmax,count;
+
+  int polir_output;
   int q_compute_id, thole_compute_id;
+
   char *id_q,*id_thole;
   char *stypeH,*stypeO,*sqeH,*sreOH,*suH,*suO,*salphaH,*salphaO;
 
   double *global_vector;
   double *charges;
 
-  int me_universe,nworlds,iworld,me;
-  int nlocal,nmax;
 };
 
 }

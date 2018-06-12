@@ -46,6 +46,8 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   typeO = force->inumeric(FLERR,arg[4]);
   alphaH = force->numeric(FLERR,arg[5]);
   alphaO = force->numeric(FLERR,arg[6]);
+  
+  // Thole damping params
   CD_intra_OH = force->numeric(FLERR,arg[7]);
   CD_intra_HH = force->numeric(FLERR,arg[8]);
   DD_intra_OH = force->numeric(FLERR,arg[9]);
