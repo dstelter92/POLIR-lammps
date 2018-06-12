@@ -128,7 +128,7 @@ void ComputePolirChargeAtom::compute_peratom()
 
   int i,ii,j,n,nb,j1,j2;
   int partner,igx,igy,igz;
-  double delx,dely,delz,rsq,roh_me,roh_partner;
+  double delx,dely,delz,rsq,roh_me,qh_partner;
   double qh1,qh2,q;
 
   double **x = atom->x;
@@ -199,6 +199,7 @@ void ComputePolirChargeAtom::compute_peratom()
       roh[i][j] = roh_me; // local array of O-H bond lengths
 
       /*
+      // First attempt at multiproc
       partner = -1;
       if (np != 1) {
         if (j > nlocal) // then particle is ghost
@@ -212,7 +213,7 @@ void ComputePolirChargeAtom::compute_peratom()
 
         // if multiproc, send/recv some data
         if (partner > 0) {
-          if (me > partner) {
+          if (me < partner) {
             MPI_Send(&roh_me,1,MPI_DOUBLE,partner,me,world);
             fprintf(screen,"proc%d sent to %d, roh=%g\n",me,partner,roh_me);
           }
@@ -247,6 +248,39 @@ void ComputePolirChargeAtom::compute_peratom()
       qH[j1] = qh1;
       qH[j2] = qh2;
 
+      // Second MPI Attempt, exchange qh
+      // Tell other procs that own atom j1 and j2 about qh1 and qh2
+      partner = -1;
+      if (j1 > nlocal) // this atom is ghost
+        partner = comm->coord2proc(x[j1],igx,igy,igx);
+      fprintf(screen,"me%d, partner%d, i=%d j1=%d(a%d)\n",me,partner,i,j1,tag[j1]);
+      if ((partner > 0) && (partner != me)) {
+        if (me < partner) { 
+          MPI_Send(&qh1,1,MPI_DOUBLE,partner,me,world);
+          fprintf(screen,"proc%d sent to %d, qh1=%g\n",me,partner,qh1);
+        }
+        else {
+          MPI_Recv(&qh_partner,1,MPI_DOUBLE,partner,me,world,MPI_STATUS_IGNORE);
+          fprintf(screen,"proc%d recv from %d, qh1=%g\n",me,partner,qh_partner);
+        }
+      }
+
+      partner = -1;
+      if (j2 > nlocal) // this atom is ghost
+        partner = comm->coord2proc(x[j2],igx,igy,igx);
+      fprintf(screen,"me%d, partner%d, i=%d j1=%d(a%d)\n",me,partner,i,j2,tag[j2]);
+      if ((partner > 0) && (partner != me)) {
+        if (me < partner) { 
+          MPI_Send(&qh2,1,MPI_DOUBLE,partner,me,world);
+          fprintf(screen,"proc%d sent to %d, qh2=%g\n",me,partner,qh2);
+        }
+        else {
+          MPI_Recv(&qh_partner,1,MPI_DOUBLE,partner,me,world,MPI_STATUS_IGNORE);
+          fprintf(screen,"proc%d recv from %d, qh2=%g\n",me,partner,qh_partner);
+        }
+      }
+
+
     
       if (POLIR_DEBUG) {
         fprintf(screen,"molid:%d proc:%d\n  roh1[%d][%d]=%f roh2[%d][%d]=%f\n  "
@@ -258,7 +292,7 @@ void ComputePolirChargeAtom::compute_peratom()
 
   // Make sure all procs know charges on H
   //MPI_Allreduce(MPI_IN_PLACE,qO,nmax,MPI_DOUBLE,MPI_MIN,world);
-  MPI_Allreduce(MPI_IN_PLACE,qH,nmax,MPI_DOUBLE,MPI_MAX,world);
+  //MPI_Allreduce(MPI_IN_PLACE,qH,nmax,MPI_DOUBLE,MPI_MAX,world);
 
   // construct peratom charge array
   for (i=0; i<nmax; i++) {
