@@ -44,7 +44,7 @@ using namespace FixConst;
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
 #define INVOKED_LOCAL 1
-#define POLIR_DEBUG 1
+#define POLIR_DEBUG 0
 
 /* ---------------------------------------------------------------------- */
 
@@ -55,6 +55,7 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 
   local_flag = 1;
 
+  // fix/polir input variables
   typeH = force->inumeric(FLERR,arg[3]);  // atom type for H
   typeO = force->inumeric(FLERR,arg[4]);  // atom type for O
   qeH = force->numeric(FLERR,arg[5]);     // equilibrium charge on H
@@ -63,6 +64,16 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
   uO = force->numeric(FLERR,arg[8]);      // O dipole along OH bond
   alphaH = force->numeric(FLERR,arg[9]);  // polarizibility for typeH
   alphaO = force->numeric(FLERR,arg[10]); // polarizibility for type0
+
+  // also store inputs as strings for future use by computes
+  stypeH = arg[3];
+  stypeO = arg[4];
+  sqeH = arg[5];
+  sreOH = arg[6];
+  suH = arg[7];
+  suO = arg[8];
+  salphaH = arg[9];
+  salphaO = arg[10];
 
 
   // Set output defaults
@@ -101,15 +112,12 @@ void FixPolir::init()
   // Init stuff here...
   int i;
   int nmax = atom->nmax;
+  count = 0;
 
-  // Constants... 
+  // Constants 
   // see fix_polir.h for details
 
-  // bond length coeff
-  c1 = 0.120;
-  c3 = -0.136;
-
-  // Thole damping coeff
+  // Thole damping parameters
   CD_intra_OH = 0.650;
   CD_intra_HH = 0.050;
   DD_intra_OH = 0.690;
@@ -117,6 +125,11 @@ void FixPolir::init()
   CC_inter = 0.50;
   CD_inter = 0.15;
   DD_inter = 0.30;
+
+  // bond length coeff
+  c1 = 0.120;
+  c3 = -0.136;
+
 
   // MPI init
   me_universe = universe->me;
@@ -142,28 +155,20 @@ void FixPolir::init()
     strcpy(id_q,id);
     strcat(id_q,"_polir_charge_atom");
     char param1[50];
-    snprintf(param1,50,"%d",typeH);
+    snprintf(param1,50,"%f",c1);
     char param2[50];
-    snprintf(param2,50,"%d",typeO);
-    char param3[50];
-    snprintf(param3,50,"%f",qeH);
-    char param4[50];
-    snprintf(param4,50,"%f",reOH);
-    char param5[50];
-    snprintf(param5,50,"%f",c1);
-    char param6[50];
-    snprintf(param6,50,"%f",c3);
+    snprintf(param2,50,"%f",c3);
 
     char **newarg = new char*[9];
     newarg[0] = id_q;
     newarg[1] = group->names[igroup];
     newarg[2] = (char *) "polir/charge/atom";
-    newarg[3] = param1;
-    newarg[4] = param2;
-    newarg[5] = param3;
-    newarg[6] = param4;
-    newarg[7] = param5;
-    newarg[8] = param6;
+    newarg[3] = stypeH;
+    newarg[4] = stypeO;
+    newarg[5] = sqeH;
+    newarg[6] = sreOH;
+    newarg[7] = param1;
+    newarg[8] = param2;
 
     modify->add_compute(9,newarg);
     delete [] newarg;
@@ -173,7 +178,61 @@ void FixPolir::init()
   compute_pca = modify->compute[q_compute_id];
 
 
+  // Search for thole compute
+  thole_compute_id = -1;
+  for (i=0; i<modify->ncompute; i++) {
+    if (strcmp(modify->compute[i]->style,"polir/thole/local") == 0) {
+      thole_compute_id = i;
+      break;
+    }
+  }
+  // If doesn't exist, create a new one
+  if (thole_compute_id < 0) {
+    int n = strlen(id) + 4;
+    id_thole = new char[n];
+    strcpy(id_thole,id);
+    strcat(id_thole,"_polir_thole_local");
+    char param3[50];
+    snprintf(param3,50,"%f",CD_intra_OH);
+    char param4[50];
+    snprintf(param4,50,"%f",CD_intra_HH);
+    char param5[50];
+    snprintf(param5,50,"%f",DD_intra_OH);
+    char param6[50];
+    snprintf(param6,50,"%f",DD_intra_HH);
+    char param7[50];
+    snprintf(param7,50,"%f",CC_inter);
+    char param8[50];
+    snprintf(param8,50,"%f",CD_inter);
+    char param9[50];
+    snprintf(param9,50,"%f",DD_inter);
 
+    char **newarg = new char*[14];
+    newarg[0] = id_thole;
+    newarg[1] = group->names[igroup];
+    newarg[2] = (char *) "polir/thole/local";
+    newarg[3] = stypeH;
+    newarg[4] = stypeO;
+    newarg[5] = salphaH;
+    newarg[6] = salphaO;
+    newarg[7] = param3;
+    newarg[8] = param4;
+    newarg[9] = param5;
+    newarg[10] = param6;
+    newarg[11] = param7;
+    newarg[12] = param8;
+    newarg[13] = param9;
+
+    modify->add_compute(14,newarg);
+    delete [] newarg;
+
+    thole_compute_id = modify->ncompute -1;
+  }
+  compute_thole = modify->compute[thole_compute_id];
+
+
+  // Thole damping coeff
+  // see compute/polir/thole/local
 }
 
 /* ---------------------------------------------------------------------- */
@@ -202,36 +261,39 @@ void FixPolir::min_setup(int vflag)
 
 void FixPolir::pre_force(int vflag)
 {
-  int i;
   int *mask = atom->mask;
   int *tag = atom->tag;
-  int nlocal = atom->nlocal;
-  int nmax = atom->nmax;
+  double *q = atom->q;
+  int i;
 
-  // Re-calculate atomic charges, invoke per-atom fix
+  nlocal = atom->nlocal;
+  nmax = atom->nmax;
+
+  // Re-calculate atomic charges based on changes from last step
+  // invoke per-atom fix
   compute_pca->compute_peratom();
   charges = compute_pca->vector_atom;
-  /*
-   MPI_Allgather(charges,nmax,MPI_DOUBLE,global_vector,nmax*nworlds,
-      MPI_DOUBLE,world);
-  */
 
-  //fprintf(screen,"nlocal=%d\n",nlocal);
+  // set atomic charges
   for (i=0; i<nlocal; i++) {
     if (mask[i] & groupbit) {
-      fprintf(screen,"proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+      if (POLIR_DEBUG)
+        fprintf(screen,"proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+      q[i] = charges[i];
     }
   }
-
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixPolir::post_force(int vflag)
 {
-  double **f = atom->f;
   int *mask = atom->mask;
-  int nlocal = atom->nlocal;
+  double **f = atom->f;
+  int i;
+  
+  nlocal = atom->nlocal;
+  nmax = atom->nmax;
 
 }
 
@@ -241,6 +303,7 @@ void FixPolir::end_of_step()
 {
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  count++;
 
 }
 
