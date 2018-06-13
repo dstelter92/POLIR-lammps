@@ -99,6 +99,9 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 FixPolir::~FixPolir()
 {
   memory->destroy(charges);
+  delete [] id_q;
+  delete [] id_thole;
+  //delete [] id_lbond;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -118,7 +121,7 @@ void FixPolir::init()
 {
   // Init stuff here...
   int i;
-  int nmax = atom->nmax;
+  nmax = atom->nmax;
   count = 0;
 
 
@@ -132,7 +135,7 @@ void FixPolir::init()
   // Search for charge compute
   compute_id = -1;
   for (i=0; i<modify->ncompute; i++) {
-    if (strcmp(modify->compute[i]->style,"polir/charge/atom") == 0) {
+    if (strcmp(modify->compute[i]->style,"POLIR/CHARGE/ATOM") == 0) {
       compute_id = i;
       break;
     }
@@ -147,7 +150,7 @@ void FixPolir::init()
     char **newarg = new char*[4];
     newarg[0] = id_q;
     newarg[1] = group->names[igroup];
-    newarg[2] = (char *) "polir/charge/atom";
+    newarg[2] = (char *) "POLIR/CHARGE/ATOM";
     newarg[3] = id;
 
     modify->add_compute(4,newarg);
@@ -161,7 +164,7 @@ void FixPolir::init()
   // Search for thole compute
   compute_id = -1;
   for (i=0; i<modify->ncompute; i++) {
-    if (strcmp(modify->compute[i]->style,"polir/thole/local") == 0) {
+    if (strcmp(modify->compute[i]->style,"POLIR/THOLE/LOCAL") == 0) {
       compute_id = i;
       break;
     }
@@ -176,7 +179,7 @@ void FixPolir::init()
     char **newarg = new char*[4];
     newarg[0] = id_thole;
     newarg[1] = group->names[igroup];
-    newarg[2] = (char *) "polir/thole/local";
+    newarg[2] = (char *) "POLIR/THOLE/LOCAL";
     newarg[3] = id;
 
     //modify->add_compute(4,newarg);
@@ -310,7 +313,7 @@ void FixPolir::end_of_step()
 
 void FixPolir::allocate()
 {
-  int nmax = atom->nmax;
+  nmax = atom->nmax;
   memory->destroy(charges);
   memory->create(charges,nmax,"polir:charges");
 }
@@ -319,7 +322,7 @@ void FixPolir::allocate()
 
 double FixPolir::memory_usage()
 {
-  int nmax = atom->nmax;
+  nmax = atom->nmax;
   double bytes = nmax*1 * sizeof(double);
   return bytes;
 }
