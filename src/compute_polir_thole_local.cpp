@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 #include "compute_polir_thole_local.h"
+#include "fix_polir.h"
 #include "atom.h"
 #include "update.h"
 #include "comm.h"
@@ -39,23 +40,14 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   if (narg != 14) error->all(FLERR,"Illegal compute polir/thole/local command");
 
   local_flag = 1;
-  size_local_cols = 0;
+  size_local_cols = 2;
   //comm_forward = 3;
   
-  typeH = force->inumeric(FLERR,arg[3]);
-  typeO = force->inumeric(FLERR,arg[4]);
-  alphaH = force->numeric(FLERR,arg[5]);
-  alphaO = force->numeric(FLERR,arg[6]);
+  // last arg is id of fix/polir
+  int len = strlen(arg[narg-1])+1;
+  fix_polir = new char[len];
+  strcpy(fix_polir,arg[narg-1]);
   
-  // Thole damping params
-  CD_intra_OH = force->numeric(FLERR,arg[7]);
-  CD_intra_HH = force->numeric(FLERR,arg[8]);
-  DD_intra_OH = force->numeric(FLERR,arg[9]);
-  DD_intra_HH = force->numeric(FLERR,arg[10]);
-  CC_inter = force->numeric(FLERR,arg[11]);
-  CD_inter = force->numeric(FLERR,arg[12]);
-  DD_inter = force->numeric(FLERR,arg[13]);
-
   nmax = 0;
   if (POLIR_DEBUG)
     fprintf(screen,"DEBUG-mode for compute polir/thole/local is ON\n");
@@ -86,8 +78,27 @@ void ComputePolirTholeLocal::init()
   neighbor->requests[irequest]->half = 0;
   neighbor->requests[irequest]->full = 1;
   neighbor->requests[irequest]->occasional = 1;
+  
+  // find polir fix
+  int ifix = modify->find_fix(fix_polir);
+  if (ifix < 0)
+    error->all(FLERR,"Fix polir ID for compute POLIR/CHARGE/ATOM does not exist");
 
-  memory->create(thole,nmax,"polir/thole/local:thole");
+  int dim;
+  typeH = (int *)modify->fix[ifix]->extract("typeH",dim);
+  typeO = (int *)modify->fix[ifix]->extract("typeO",dim);
+  CD_intra_OH = (double *)modify->fix[ifix]->extract("CD_intra_OH",dim);
+  CD_intra_HH = (double *)modify->fix[ifix]->extract("CD_intra_HH",dim);
+  DD_intra_OH = (double *)modify->fix[ifix]->extract("DD_intra_OH",dim);
+  DD_intra_HH = (double *)modify->fix[ifix]->extract("DD_intra_HH",dim);
+  CC_inter = (double *)modify->fix[ifix]->extract("CC_inter",dim);
+  CD_inter = (double *)modify->fix[ifix]->extract("CD_inter",dim);
+  DD_inter = (double *)modify->fix[ifix]->extract("DD_inter",dim);
+
+  if (dim != 0)
+    error->all(FLERR,"Cannot extract fix/polir inputs and constants");
+
+  memory->create(thole,nmax,2,"polir/thole/local:thole");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -106,28 +117,68 @@ void ComputePolirTholeLocal::compute_local()
   // check that nmax is same, otherwise update arrays
   if (atom->nmax > nmax) {
     allocate();
-    vector_local = thole;
+    //array_local = thole;
   }
 
   // invoke neighbor list build/copy as occasional
   neighbor->build_one(list);
 
-  int ii,jj,i,j;
+  int ii,jj,i,j,k;
+  double alphai,alphaj;
+  double delx,dely,delz,rsq,r;
+  double t1,t2,ra4,ra;
+
   int inum = list->inum;
   int *ilist = list->ilist;
+  int *mask = atom->mask;
+  int *type = atom->type;
+  double **x = atom->x;
+
+  damping = 1.0;
 
   // loop over all neighbors, calc thole damping
   for (ii=0; ii<inum; ii++) {
+    if (!(mask[i] & groupbit)) continue;
     i = ilist[ii]; // local index1
+
+    if (type[i] == (*typeH))
+      alphai = alphaH;
+    else if (type[i] == (*typeO))
+      alphai = alphaO;
+    else 
+      error->all(FLERR,"No polarizibility to assign to atom type");
+
     for (jj=0; jj<inum; jj++) {
+      if (!(mask[j] & groupbit)) continue;
       j = ilist[jj]; // local index2
 
-      // BLAH!
+      if (type[j] == (*typeH))
+        alphaj = alphaH;
+      else if (type[i] == (*typeO))
+        alphaj = alphaO;
+      else
+        error->all(FLERR,"No polarizibility to assign to atom type");
 
+      // calc polarizbility constant
+      A_const = pow(alphai*alphaj,1/6);
+
+      // get distance between particles
+      delx = x[i][0] - x[j][0];
+      dely = x[i][1] - x[j][1];
+      delz = x[i][2] - x[j][2];
+      rsq = delx*delx + dely*dely + delz*delz;
+      r = sqrt(rsq);
+
+      // other constants
+      ra = (r / A_const);
+      ra4 = pow(r,4);
+
+      t1 = exp(-damping*ra4);
+      t2 = pow(damping,1/4)*ra*0; // for now no gamma fctn implemented
+        
+      thole[i][j] = (1 - t1 + t2) / r;
     }
   }
-
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -136,7 +187,7 @@ void ComputePolirTholeLocal::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(thole);
-  memory->create(thole,nmax,"polir/thole/local:thole");
+  memory->create(thole,nmax,2,"polir/thole/local:thole");
 }
 
 /* ----------------------------------------------------------------------
@@ -145,6 +196,6 @@ void ComputePolirTholeLocal::allocate()
 
 double ComputePolirTholeLocal::memory_usage()
 {
-  double bytes = nmax*1 * sizeof(double);
+  double bytes = nmax*2 * sizeof(double);
   return bytes;
 }
