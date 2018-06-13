@@ -16,7 +16,9 @@
 ------------------------------------------------------------------------- */
 #include <cstring>
 #include <cmath>
+#include "stdlib.h"
 #include "compute_polir_charge_atom.h"
+#include "fix_polir.h"
 #include "atom.h"
 #include "update.h"
 #include "comm.h"
@@ -34,23 +36,19 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg)
+  Compute(lmp, narg-1, arg)
 {
-  if (narg != 9) error->all(FLERR,"Illegal compute polir/charge/atom command");
-
   peratom_flag = 1;
   size_peratom_cols = 0;
 
-  typeH = force->inumeric(FLERR,arg[3]);
-  typeO = force->inumeric(FLERR,arg[4]);
-  qeH = force->numeric(FLERR,arg[5]);
-  reOH = force->numeric(FLERR,arg[6]);
-  c1 = force->numeric(FLERR,arg[7]);
-  c3 = force->numeric(FLERR,arg[8]);
+  // last arg is id of fix/polir
+  int len = strlen(arg[narg-1])+1;
+  fix_polir = new char[len];
+  strcpy(fix_polir,arg[narg-1]);
 
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&np);
-
+    
   nmax = 0;
   if (POLIR_DEBUG)
     fprintf(screen,"DEBUG-mode for compute polir/charge/atom is ON\n");
@@ -70,11 +68,27 @@ ComputePolirChargeAtom::~ComputePolirChargeAtom()
 
 void ComputePolirChargeAtom::init()
 {
-  int count = 0;
+  int count=0;
   for (int i=0; i<modify->ncompute; i++)
     if (strcmp(modify->compute[i]->style,"polir/charge/atom") == 0) count++;
   if (count > 1 && comm->me == 0)
     error->warning(FLERR,"More than one compute polir/charge/atom");
+
+  // find polir fix
+  int ifix = modify->find_fix(fix_polir);
+  if (ifix < 0)
+    error->all(FLERR,"Fix polir ID for compute POLIR/CHARGE/ATOM does not exist");
+
+  int dim;
+  typeH = (int *)modify->fix[ifix]->extract("typeH",dim);
+  typeO = (int *)modify->fix[ifix]->extract("typeO",dim);
+  c1 = (double *)modify->fix[ifix]->extract("c1",dim);
+  c3 = (double *)modify->fix[ifix]->extract("c3",dim);
+  qeH = (double *)modify->fix[ifix]->extract("qeH",dim);
+  reOH = (double *)modify->fix[ifix]->extract("reOH",dim);
+    
+  if (dim != 0)
+    error->all(FLERR,"Cannot extract fix/polir inputs and constants");
 
   memory->create(qpolir,nmax,"polir/charge/atom:qpolir");
   memory->create(qH,nmax,"polir/charge/atom:qH");
@@ -97,8 +111,6 @@ void ComputePolirChargeAtom::compute_peratom()
   if (!atom->molecular)
     error->all(FLERR,"Atom style must include molecule IDs");
 
-  //comm->coord2proc_setup();
-
   int i,ii,j,n,nb,j1,j2;
   int partner,igx,igy,igz;
   double delx,dely,delz,rsq,roh_me,roh_partner;
@@ -114,8 +126,6 @@ void ComputePolirChargeAtom::compute_peratom()
   int **bond_type = atom->bond_type;
   tagint *molid = atom->molecule;
   tagint *tag = atom->tag;
-
-
 
   // clear local array
   for (i=0; i<nmax; i++)
@@ -133,7 +143,7 @@ void ComputePolirChargeAtom::compute_peratom()
     // This was done for flexibility with future polarizible
     // atoms and materials (eg H3O+)
 
-    if (!((type[i] == typeO) || (type[i] == typeH))) {
+    if (!((type[i] == (*typeO)) || (type[i] == (*typeH)))) {
       error->all(FLERR,"Atom types other than those specified are present in "
           "the current group\n Use a proper 'group' with POLIR");
     }
@@ -197,20 +207,20 @@ void ComputePolirChargeAtom::compute_peratom()
       */
     }
   
-    if (type[i] == typeO) {
+    if (type[i] == (*typeO)) {
 
       // use first two bonds to get local atom index
       j1 = atom->map(bond_atom[i][0]);
       j2 = atom->map(bond_atom[i][1]);
 
       // Calculate charges for all atoms in molecule
-      qh1 = qeH;
-      qh1 += c1*(roh[i][j1] + roh[i][j2] - (2*reOH));
-      qh1 += c3*(roh[i][j1] - roh[i][j2]);
+      qh1 = (*qeH);
+      qh1 += (*c1)*(roh[i][j1] + roh[i][j2] - (2*(*reOH)));
+      qh1 += (*c3)*(roh[i][j1] - roh[i][j2]);
 
-      qh2 = qeH;
-      qh2 += c1*(roh[i][j1] + roh[i][j2] - (2*reOH));
-      qh2 += c3*(roh[i][j2] - roh[i][j1]);
+      qh2 = (*qeH);
+      qh2 += (*c1)*(roh[i][j1] + roh[i][j2] - (2*(*reOH)));
+      qh2 += (*c3)*(roh[i][j2] - roh[i][j1]);
 
       q = -(qh1 + qh2); // make negative later
 
@@ -234,9 +244,9 @@ void ComputePolirChargeAtom::compute_peratom()
 
   // construct peratom charge array
   for (i=0; i<nmax; i++) {
-    if (type[i] == typeO)
+    if (type[i] == (*typeO))
       qpolir[i] = qO[i];
-    else if (type[i] == typeH)
+    else if (type[i] == (*typeH))
       qpolir[i] = qH[i];
   }
 

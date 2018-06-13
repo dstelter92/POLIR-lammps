@@ -32,16 +32,22 @@ class ComputePolirChargeAtom : public Compute {
   void compute_peratom();
   double memory_usage();
 
- private:
+ protected:
+
   int me,np;
-  int nmax,typeH,typeO;
-  double c1,c3,qeH,reOH;
+  int ifix;
+  int nmax;
+  int *typeH,*typeO;
+  double *c1,*c3,*qeH,*reOH;
   double *qpolir;
+  double **roh;
   double *qH;
   double *qO;
-  double **roh;
+
+  char *fix_polir;
   
   void allocate();
+  
 };
 
 }
