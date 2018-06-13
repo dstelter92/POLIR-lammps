@@ -158,19 +158,26 @@ void ComputePolirTholeLocal::compute_local()
       alphai = alphaH;
     else if (type[i] == (*typeO))
       alphai = alphaO;
-    else 
+    else {
+      if (POLIR_DEBUG)
+        fprintf(screen,"atom%d has type%d\n",i,type[i]);
       error->all(FLERR,"No polarizibility to assign to atom type");
+    }
 
     for (jj=0; jj<inum; jj++) {
       j = ilist[jj]; // local index 2
+      if (i == j) continue;
       if (!(mask[j] & groupbit)) continue;
 
       if (type[j] == (*typeH))
         alphaj = alphaH;
-      else if (type[i] == (*typeO))
+      else if (type[j] == (*typeO))
         alphaj = alphaO;
-      else
+      else {
+        if (POLIR_DEBUG)
+          fprintf(screen,"atom%d has type%d\n",j,type[j]);
         error->all(FLERR,"No polarizibility to assign to atom type");
+      }
 
       // calc polarizbility constant
       A_const = pow(alphai*alphaj,1/6);
@@ -187,7 +194,7 @@ void ComputePolirTholeLocal::compute_local()
       ra4 = pow(r,4);
 
       if (POLIR_DEBUG)
-        fprintf(screen,"pair%d:  ",m);
+        fprintf(screen,"thole for pair%d (%d-%d) r=%g:\n  ",m,i,j,r);
 
       for (k=0; k<nvalues; k++) {
         t1 = exp(-damping[k]*ra4);
@@ -196,7 +203,7 @@ void ComputePolirTholeLocal::compute_local()
         thole[m][k] = (1 - t1 + t2) / r;
 
         if (POLIR_DEBUG)
-          fprintf(screen,"thole[%d]=%g  ",k,thole[m][k]);
+          fprintf(screen,"t[%d]=%g  ",k,thole[m][k]);
       }
 
       if (POLIR_DEBUG)
