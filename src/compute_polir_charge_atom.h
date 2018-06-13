@@ -13,7 +13,7 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(polir/charge/atom,ComputePolirChargeAtom)
+ComputeStyle(POLIR/CHARGE/ATOM,ComputePolirChargeAtom)
 
 #else
 

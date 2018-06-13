@@ -37,7 +37,7 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   Compute(lmp, narg, arg),
   list(NULL)
 {
-  if (narg != 14) error->all(FLERR,"Illegal compute polir/thole/local command");
+  if (narg != 14) error->all(FLERR,"Illegal compute POLIR/THOLE/LOCAL command");
 
   local_flag = 1;
   size_local_cols = 2;
@@ -50,7 +50,7 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   
   nmax = 0;
   if (POLIR_DEBUG)
-    fprintf(screen,"DEBUG-mode for compute polir/thole/local is ON\n");
+    fprintf(screen,"DEBUG-mode for compute POLIR/THOLE/LOCAL is ON\n");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,9 +67,9 @@ void ComputePolirTholeLocal::init()
   // make multiple computes don't exist
   int count = 0;
   for (int i=0; i<modify->ncompute; i++)
-    if (strcmp(modify->compute[i]->style,"polir/thole/local") == 0) count++;
+    if (strcmp(modify->compute[i]->style,"POLIR/THOLE/LOCAL") == 0) count++;
   if (count > 1 && comm->me == 0)
-    error->warning(FLERR,"More than one compute polir/thole/local");
+    error->warning(FLERR,"More than one compute POLIR/THOLE/LOCAL");
 
   // need occasional full neighbor list build
   int irequest = neighbor->request(this,instance_me);
@@ -82,9 +82,10 @@ void ComputePolirTholeLocal::init()
   // find polir fix
   int ifix = modify->find_fix(fix_polir);
   if (ifix < 0)
-    error->all(FLERR,"Fix polir ID for compute POLIR/CHARGE/ATOM does not exist");
+    error->all(FLERR,"Fix polir ID for compute POLIR/THOLE/LOCAL does not exist");
 
   int dim;
+  // get values needed here in compute/polir/thole
   typeH = (int *)modify->fix[ifix]->extract("typeH",dim);
   typeO = (int *)modify->fix[ifix]->extract("typeO",dim);
   CD_intra_OH = (double *)modify->fix[ifix]->extract("CD_intra_OH",dim);
@@ -98,7 +99,7 @@ void ComputePolirTholeLocal::init()
   if (dim != 0)
     error->all(FLERR,"Cannot extract fix/polir inputs and constants");
 
-  memory->create(thole,nmax,2,"polir/thole/local:thole");
+  memory->create(thole,nmax,2,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -119,6 +120,10 @@ void ComputePolirTholeLocal::compute_local()
     allocate();
     //array_local = thole;
   }
+
+  // default to calculate the entire array
+  which = 0;
+
 
   // invoke neighbor list build/copy as occasional
   neighbor->build_one(list);
@@ -187,7 +192,7 @@ void ComputePolirTholeLocal::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(thole);
-  memory->create(thole,nmax,2,"polir/thole/local:thole");
+  memory->create(thole,nmax,2,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ----------------------------------------------------------------------

@@ -51,7 +51,7 @@ ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg
     
   nmax = 0;
   if (POLIR_DEBUG)
-    fprintf(screen,"DEBUG-mode for compute polir/charge/atom is ON\n");
+    fprintf(screen,"DEBUG-mode for compute POLIR/CHARGE/ATOM is ON\n");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -70,9 +70,9 @@ void ComputePolirChargeAtom::init()
 {
   int count=0;
   for (int i=0; i<modify->ncompute; i++)
-    if (strcmp(modify->compute[i]->style,"polir/charge/atom") == 0) count++;
+    if (strcmp(modify->compute[i]->style,"POLIR/CHARGE/ATOM") == 0) count++;
   if (count > 1 && comm->me == 0)
-    error->warning(FLERR,"More than one compute polir/charge/atom");
+    error->warning(FLERR,"More than one compute POLIR/CHARGE/ATOM");
 
   // find polir fix
   int ifix = modify->find_fix(fix_polir);
@@ -90,10 +90,10 @@ void ComputePolirChargeAtom::init()
   if (dim != 0)
     error->all(FLERR,"Cannot extract fix/polir inputs and constants");
 
-  memory->create(qpolir,nmax,"polir/charge/atom:qpolir");
-  memory->create(qH,nmax,"polir/charge/atom:qH");
-  memory->create(qO,nmax,"polir/charge/atom:qO");
-  memory->create(roh,nmax,2,"polir/charge/atom:roh");
+  memory->create(qpolir,nmax,"POLIR/CHARGE/ATOM:qpolir");
+  memory->create(qH,nmax,"POLIR/CHARGE/ATOM:qH");
+  memory->create(qO,nmax,"POLIR/CHARGE/ATOM:qO");
+  memory->create(roh,nmax,2,"POLIR/CHARGE/ATOM:roh");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -261,10 +261,10 @@ void ComputePolirChargeAtom::allocate()
   memory->destroy(qH);
   memory->destroy(qO);
   memory->destroy(roh);
-  memory->create(qpolir,nmax,"polir/charge/atom:qpolir");
-  memory->create(qH,nmax,"polir/charge/atom:qH");
-  memory->create(qO,nmax,"polir/charge/atom:qO");
-  memory->create(roh,nmax,2,"polir/charge/atom:roh");
+  memory->create(qpolir,nmax,"POLIR/CHARGE/ATOM:qpolir");
+  memory->create(qH,nmax,"POLIR/CHARGE/ATOM:qH");
+  memory->create(qO,nmax,"POLIR/CHARGE/ATOM:qO");
+  memory->create(roh,nmax,2,"POLIR/CHARGE/ATOM:roh");
 }
 
 /* ----------------------------------------------------------------------

@@ -13,7 +13,7 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(polir/thole/local,ComputePolirTholeLocal)
+ComputeStyle(POLIR/THOLE/LOCAL,ComputePolirTholeLocal)
 
 #else
 
@@ -35,7 +35,7 @@ class ComputePolirTholeLocal : public Compute {
 
  private:
   class NeighList *list;
-  int nvalues,nmax;
+  int nvalues,nmax,which;
   double A_const,alphaH,alphaO;
   double damping;
 
