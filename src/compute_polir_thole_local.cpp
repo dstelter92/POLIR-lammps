@@ -34,14 +34,14 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg),
+  Compute(lmp, narg-1, arg),
   list(NULL)
 {
-  if (narg != 14) error->all(FLERR,"Illegal compute POLIR/THOLE/LOCAL command");
+  // default calculate all values (7) of thole potential for all local pairs
+  nvalues = 7; 
 
   local_flag = 1;
-  size_local_cols = 2;
-  //comm_forward = 3;
+  size_local_cols = nvalues;
   
   // last arg is id of fix/polir
   int len = strlen(arg[narg-1])+1;
@@ -58,6 +58,7 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
 ComputePolirTholeLocal::~ComputePolirTholeLocal()
 {
   memory->destroy(thole);
+  memory->destroy(damping);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -79,6 +80,9 @@ void ComputePolirTholeLocal::init()
   neighbor->requests[irequest]->full = 1;
   neighbor->requests[irequest]->occasional = 1;
   
+  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
+  memory->create(damping,nvalues,"POLIR/THOLE/LOCAL:damping");
+
   // find polir fix
   int ifix = modify->find_fix(fix_polir);
   if (ifix < 0)
@@ -96,10 +100,29 @@ void ComputePolirTholeLocal::init()
   CD_inter = (double *)modify->fix[ifix]->extract("CD_inter",dim);
   DD_inter = (double *)modify->fix[ifix]->extract("DD_inter",dim);
 
+  // pack constants into array
+  for (int i=0; i<nvalues; i++) {
+    if (i=0)
+      damping[i] = (*CD_intra_OH);
+    else if (i=1)
+      damping[i] = (*CD_intra_HH);
+    else if (i=2)
+      damping[i] = (*DD_intra_OH);
+    else if (i=3)
+      damping[i] = (*DD_intra_HH);
+    else if (i=4)
+      damping[i] = (*CC_inter);
+    else if (i=5)
+      damping[i] = (*CD_inter);
+    else if (i=6)
+      damping[i] = (*DD_inter);
+    else
+      error->all(FLERR,"Too many damping coeffs");
+  }
+
   if (dim != 0)
     error->all(FLERR,"Cannot extract fix/polir inputs and constants");
 
-  memory->create(thole,nmax,2,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -121,14 +144,10 @@ void ComputePolirTholeLocal::compute_local()
     //array_local = thole;
   }
 
-  // default to calculate the entire array
-  which = 0;
-
-
   // invoke neighbor list build/copy as occasional
   neighbor->build_one(list);
 
-  int ii,jj,i,j,k;
+  int ii,jj,m,i,j,k;
   double alphai,alphaj;
   double delx,dely,delz,rsq,r;
   double t1,t2,ra4,ra;
@@ -139,9 +158,9 @@ void ComputePolirTholeLocal::compute_local()
   int *type = atom->type;
   double **x = atom->x;
 
-  damping = 1.0;
 
   // loop over all neighbors, calc thole damping
+  m=0;
   for (ii=0; ii<inum; ii++) {
     if (!(mask[i] & groupbit)) continue;
     i = ilist[ii]; // local index1
@@ -178,10 +197,12 @@ void ComputePolirTholeLocal::compute_local()
       ra = (r / A_const);
       ra4 = pow(r,4);
 
-      t1 = exp(-damping*ra4);
-      t2 = pow(damping,1/4)*ra*0; // for now no gamma fctn implemented
+      for (k=0; k<nvalues; k++) {
+        t1 = exp(-damping[k]*ra4);
+        t2 = pow(damping[k],1/4)*ra*0; // for now no gamma fctn implemented
         
-      thole[i][j] = (1 - t1 + t2) / r;
+        thole[m][k] = (1 - t1 + t2) / r;
+      }
     }
   }
 }
@@ -192,7 +213,7 @@ void ComputePolirTholeLocal::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(thole);
-  memory->create(thole,nmax,2,"POLIR/THOLE/LOCAL:thole");
+  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ----------------------------------------------------------------------

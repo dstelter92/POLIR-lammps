@@ -35,11 +35,11 @@ class ComputePolirTholeLocal : public Compute {
 
  private:
   class NeighList *list;
-  int nvalues,nmax,which;
+  int nvalues,nmax;
   double A_const,alphaH,alphaO;
-  double damping;
 
   double **thole;
+  double *damping;
   int *typeH,*typeO;
   double *CD_intra_OH,*CD_intra_HH,*DD_intra_OH,*DD_intra_HH;
   double *CC_inter,*CD_inter,*DD_inter;
