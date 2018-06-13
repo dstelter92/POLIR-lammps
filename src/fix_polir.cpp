@@ -44,7 +44,7 @@ using namespace FixConst;
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
 #define INVOKED 1
-#define POLIR_DEBUG 0
+#define POLIR_DEBUG 1
 
 /* ---------------------------------------------------------------------- */
 
@@ -132,7 +132,7 @@ void FixPolir::init()
   
   // memory management
   memory->create(charges,nmax,"polir:charges");
-  memory->create(thole,nmax,7,"polir:thole");
+  memory->create(thole,nmax,9,"polir:thole");
 
   // Search for charge compute
   compute_id = -1;
@@ -280,7 +280,7 @@ void FixPolir::pre_force(int vflag)
   for (i=0; i<nlocal; i++) {
     if (mask[i] & groupbit) {
       if (POLIR_DEBUG)
-        fprintf(screen,"proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+        fprintf(screen,"CHARGE: proc:%d atom%d:%g\n",me,tag[i],charges[i]);
       q[i] = charges[i];
     }
   }
@@ -291,17 +291,33 @@ void FixPolir::pre_force(int vflag)
 void FixPolir::post_force(int vflag)
 {
   int *mask = atom->mask;
+  int *tag = atom->tag;
   double **f = atom->f;
-  int i;
+  int i,j,m,k;
   
   nlocal = atom->nlocal;
   nmax = atom->nmax;
   
+  allocate();
+  
   compute_thole->compute_local();
   thole = compute_thole->array_local;
+  npairs = compute_thole->size_local_rows;
+  ndamp = compute_thole->size_local_cols - 2;
   
-  allocate();
-
+  for (m=0; m<npairs; m++) {
+    i = thole[m][0];
+    j = thole[m][1];
+    if (!((mask[i] & groupbit) && (mask[j] & groupbit))) continue;
+    if (POLIR_DEBUG)
+      fprintf(screen,"THOLE: proc:%d pair%d-%d:\n  ",me,tag[i],tag[j]);
+    for (k=0; k<ndamp; k++) {
+      if (POLIR_DEBUG)
+        fprintf(screen,"t[%d]=%g  ",k,thole[m][k+2]);
+    }
+    if (POLIR_DEBUG)
+      fprintf(screen,"\n");
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -321,7 +337,7 @@ void FixPolir::allocate()
   nmax = atom->nmax;
   memory->destroy(charges);
   memory->create(charges,nmax,"polir:charges");
-  memory->create(thole,nmax,7,"polir:thole");
+  memory->create(thole,nmax,9,"polir:thole");
 }
 
 /* ---------------------------------------------------------------------- */

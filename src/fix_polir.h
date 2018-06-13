@@ -67,7 +67,7 @@ class FixPolir : public Fix {
 
  protected:
   int me,nprocs;
-  int nlocal,nmax,count;
+  int nlocal,nmax,npairs,ndamp,count;
 
   int polir_output;
   int compute_id;

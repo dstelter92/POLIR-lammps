@@ -29,7 +29,7 @@
 
 using namespace LAMMPS_NS;
 
-#define POLIR_DEBUG 1
+#define POLIR_DEBUG 0
 
 /* ---------------------------------------------------------------------- */
 
@@ -38,7 +38,7 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   list(NULL)
 {
   // default calculate all values (7) of thole potential for all local pairs
-  nvalues = 7; 
+  nvalues = 9; 
 
   local_flag = 1;
   size_local_cols = nvalues;
@@ -81,7 +81,7 @@ void ComputePolirTholeLocal::init()
   neighbor->requests[irequest]->occasional = 1;
   
   memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
-  memory->create(damping,nvalues,"POLIR/THOLE/LOCAL:damping");
+  memory->create(damping,nvalues-2,"POLIR/THOLE/LOCAL:damping");
 
   // find polir fix
   int ifix = modify->find_fix(fix_polir);
@@ -127,22 +127,30 @@ void ComputePolirTholeLocal::compute_local()
 {
   invoked_local = update->ntimestep;
 
-  // check that nmax is same, otherwise update arrays
-  if (atom->nmax > nmax) {
+  npairs = compute_pairs(0);
+  if (npairs > nmax) {
     allocate();
     array_local = thole;
   }
 
+  size_local_rows = npairs;
+  compute_pairs(1);
+
+}
+
+int ComputePolirTholeLocal::compute_pairs(int flag)
+{
   // invoke neighbor list build/copy as occasional
-  neighbor->build_one(list);
+  if (flag == 0)
+    neighbor->build_one(list);
 
   int ii,jj,m,i,j,k;
   double alphai,alphaj;
   double delx,dely,delz,rsq,r;
   double t1,t2,ra4,ra;
 
-  int inum = list->inum;
-  int *ilist = list->ilist;
+  inum = list->inum;
+  ilist = list->ilist;
   int *mask = atom->mask;
   int *type = atom->type;
   double **x = atom->x;
@@ -179,39 +187,44 @@ void ComputePolirTholeLocal::compute_local()
         error->all(FLERR,"No polarizibility to assign to atom type");
       }
 
-      // calc polarizbility constant
-      A_const = pow(alphai*alphaj,1/6);
+      if (flag > 0) { // only count if flag == 0
+        // calc polarizbility constant
+        A_const = pow(alphai*alphaj,1/6);
 
-      // get distance between particles
-      delx = x[i][0] - x[j][0];
-      dely = x[i][1] - x[j][1];
-      delz = x[i][2] - x[j][2];
-      rsq = delx*delx + dely*dely + delz*delz;
-      r = sqrt(rsq);
+        // get distance between particles
+        delx = x[i][0] - x[j][0];
+        dely = x[i][1] - x[j][1];
+        delz = x[i][2] - x[j][2];
+        rsq = delx*delx + dely*dely + delz*delz;
+        r = sqrt(rsq);
 
-      // other constants
-      ra = (r / A_const);
-      ra4 = pow(r,4);
-
-      if (POLIR_DEBUG)
-        fprintf(screen,"thole for pair%d (%d-%d) r=%g:\n  ",m,i,j,r);
-
-      for (k=0; k<nvalues; k++) {
-        t1 = exp(-damping[k]*ra4);
-        t2 = pow(damping[k],1/4)*ra*0; // for now no gamma fctn implemented
-        
-        thole[m][k] = (1 - t1 + t2) / r;
+        // other constants
+        ra = (r / A_const);
+        ra4 = pow(r,4);
 
         if (POLIR_DEBUG)
-          fprintf(screen,"t[%d]=%g  ",k,thole[m][k]);
+          fprintf(screen,"thole for pair%d (%d-%d) r=%g:\n  ",m,i,j,r);
+
+        thole[m][0] = i;
+        thole[m][1] = j;
+        for (k=2; k<nvalues; k++) {
+          t1 = exp(-damping[k-1]*ra4);
+          t2 = pow(damping[k-1],1/4)*ra*0;
+          //*gamma(3/4)*gsl_sf_gamma_inc(3/4,damping[k-1]*ra4); // for now no gamma fctn implemented
+        
+          thole[m][k] = (1 - t1 + t2) / r;
+
+          if (POLIR_DEBUG)
+            fprintf(screen,"t[%d]=%g  ",k,thole[m][k]);
+        }
+
+        if (POLIR_DEBUG)
+          fprintf(screen,"\n");
       }
-
-      if (POLIR_DEBUG)
-        fprintf(screen,"\n");
-
       m++;
     }
   }
+  return m;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -229,6 +242,7 @@ void ComputePolirTholeLocal::allocate()
 
 double ComputePolirTholeLocal::memory_usage()
 {
-  double bytes = nmax*2 * sizeof(double);
+  double bytes = nmax*nvalues * sizeof(double);
+  bytes += (nvalues-2) * sizeof(double);
   return bytes;
 }

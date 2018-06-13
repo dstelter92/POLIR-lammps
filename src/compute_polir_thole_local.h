@@ -31,11 +31,13 @@ class ComputePolirTholeLocal : public Compute {
   void init();
   void init_list(int, class NeighList *);
   void compute_local();
+  int compute_pairs(int);
   double memory_usage();
 
  private:
   class NeighList *list;
-  int nvalues,nmax;
+  int nvalues,npairs,nmax,inum;
+  int *ilist;
   double A_const,alphaH,alphaO;
 
   double **thole;

@@ -132,7 +132,7 @@ void ComputePolirChargeAtom::compute_peratom()
     qpolir[i] = 0.0;
 
 
-  // Loop over all neighbors
+  // Loop over local atoms in this proc
   for (i=0; i<nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;
     nb = num_bond[i];
