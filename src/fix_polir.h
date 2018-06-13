@@ -37,12 +37,8 @@ class FixPolir : public Fix {
   void end_of_step();
   void allocate();
   double memory_usage();
+  void *extract(const char *, int &);
 
- private:
-  Compute *compute_pca;
-  Compute *compute_thole;
-
- protected:
   // INPUT VARIABLES
   int typeH;                        // type index of H
   int typeO;                        // type index of O
@@ -64,17 +60,24 @@ class FixPolir : public Fix {
   double CD_inter;        // Thole damping coeff, charge-dipole intermolecular
   double DD_inter;        // Thole damping coeff, dipole-dipole intermolecular
   
+ private:
+  Compute *compute_pca;
+  Compute *compute_lbond;
+  Compute *compute_thole;
+
+ protected:
   int me,nprocs;
   int nlocal,nmax,count;
 
   int polir_output;
-  int q_compute_id, thole_compute_id;
+  int compute_id;
 
-  char *id_q,*id_thole;
+  char *id_q,*id_lbond,*id_thole;
   char *stypeH,*stypeO,*sqeH,*sreOH,*suH,*suO,*salphaH,*salphaO;
 
   double *global_vector;
   double *charges;
+  double *lbond;
 
 };
 
