@@ -78,6 +78,7 @@ class FixPolir : public Fix {
   double *global_vector;
   double *charges;
   double *lbond;
+  double **thole;
 
 };
 

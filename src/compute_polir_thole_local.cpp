@@ -65,7 +65,7 @@ ComputePolirTholeLocal::~ComputePolirTholeLocal()
 
 void ComputePolirTholeLocal::init()
 {
-  // make multiple computes don't exist
+  // make sure multiple computes don't exist
   int count = 0;
   for (int i=0; i<modify->ncompute; i++)
     if (strcmp(modify->compute[i]->style,"POLIR/THOLE/LOCAL") == 0) count++;
@@ -100,25 +100,14 @@ void ComputePolirTholeLocal::init()
   CD_inter = (double *)modify->fix[ifix]->extract("CD_inter",dim);
   DD_inter = (double *)modify->fix[ifix]->extract("DD_inter",dim);
 
-  // pack constants into array
-  for (int i=0; i<nvalues; i++) {
-    if (i=0)
-      damping[i] = (*CD_intra_OH);
-    else if (i=1)
-      damping[i] = (*CD_intra_HH);
-    else if (i=2)
-      damping[i] = (*DD_intra_OH);
-    else if (i=3)
-      damping[i] = (*DD_intra_HH);
-    else if (i=4)
-      damping[i] = (*CC_inter);
-    else if (i=5)
-      damping[i] = (*CD_inter);
-    else if (i=6)
-      damping[i] = (*DD_inter);
-    else
-      error->all(FLERR,"Too many damping coeffs");
-  }
+  // put constants into array
+  damping[0] = *CD_intra_OH;
+  damping[1] = *CD_intra_HH;
+  damping[2] = *DD_intra_OH;
+  damping[3] = *DD_intra_HH;
+  damping[4] = *CC_inter;
+  damping[5] = *CD_inter;
+  damping[6] = *DD_inter;
 
   if (dim != 0)
     error->all(FLERR,"Cannot extract fix/polir inputs and constants");
@@ -141,7 +130,7 @@ void ComputePolirTholeLocal::compute_local()
   // check that nmax is same, otherwise update arrays
   if (atom->nmax > nmax) {
     allocate();
-    //array_local = thole;
+    array_local = thole;
   }
 
   // invoke neighbor list build/copy as occasional
@@ -173,8 +162,8 @@ void ComputePolirTholeLocal::compute_local()
       error->all(FLERR,"No polarizibility to assign to atom type");
 
     for (jj=0; jj<inum; jj++) {
+      j = ilist[jj]; // local index 2
       if (!(mask[j] & groupbit)) continue;
-      j = ilist[jj]; // local index2
 
       if (type[j] == (*typeH))
         alphaj = alphaH;
@@ -197,12 +186,23 @@ void ComputePolirTholeLocal::compute_local()
       ra = (r / A_const);
       ra4 = pow(r,4);
 
+      if (POLIR_DEBUG)
+        fprintf(screen,"pair%d:  ",m);
+
       for (k=0; k<nvalues; k++) {
         t1 = exp(-damping[k]*ra4);
         t2 = pow(damping[k],1/4)*ra*0; // for now no gamma fctn implemented
         
         thole[m][k] = (1 - t1 + t2) / r;
+
+        if (POLIR_DEBUG)
+          fprintf(screen,"thole[%d]=%g  ",k,thole[m][k]);
       }
+
+      if (POLIR_DEBUG)
+        fprintf(screen,"\n");
+
+      m++;
     }
   }
 }

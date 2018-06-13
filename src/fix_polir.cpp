@@ -99,6 +99,7 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 FixPolir::~FixPolir()
 {
   memory->destroy(charges);
+  memory->destroy(thole);
   delete [] id_q;
   delete [] id_thole;
   //delete [] id_lbond;
@@ -131,6 +132,7 @@ void FixPolir::init()
   
   // memory management
   memory->create(charges,nmax,"polir:charges");
+  memory->create(thole,nmax,7,"polir:thole");
 
   // Search for charge compute
   compute_id = -1;
@@ -182,12 +184,12 @@ void FixPolir::init()
     newarg[2] = (char *) "POLIR/THOLE/LOCAL";
     newarg[3] = id;
 
-    //modify->add_compute(4,newarg);
+    modify->add_compute(4,newarg);
     delete [] newarg;
 
-    //compute_id = modify->ncompute - 1;
+    compute_id = modify->ncompute - 1;
   }
-  //compute_thole = modify->compute[compute_id];
+  compute_thole = modify->compute[compute_id];
   
 
   /*
@@ -230,7 +232,7 @@ void FixPolir::setup(int vflag)
     // Invoke all computes to run on each step
     compute_pca->invoked_flag |= INVOKED;
     //compute_lbond->invoked_flag |= INVOKED;
-    //compute_thole->invoked_flag |= INVOKED;
+    compute_thole->invoked_flag |= INVOKED;
     modify->addstep_compute(update->ntimestep + 1);
   }
   else
@@ -295,6 +297,9 @@ void FixPolir::post_force(int vflag)
   nlocal = atom->nlocal;
   nmax = atom->nmax;
   
+  compute_thole->compute_local();
+  thole = compute_thole->array_local;
+  
   allocate();
 
 }
@@ -316,6 +321,7 @@ void FixPolir::allocate()
   nmax = atom->nmax;
   memory->destroy(charges);
   memory->create(charges,nmax,"polir:charges");
+  memory->create(thole,nmax,7,"polir:thole");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -323,7 +329,7 @@ void FixPolir::allocate()
 double FixPolir::memory_usage()
 {
   nmax = atom->nmax;
-  double bytes = nmax*1 * sizeof(double);
+  double bytes = nmax*8 * sizeof(double);
   return bytes;
 }
 
