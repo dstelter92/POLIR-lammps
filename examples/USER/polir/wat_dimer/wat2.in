@@ -20,7 +20,9 @@ timestep 1.0
 
 variable temp equal 300.0
 velocity all create ${temp} 1091823 rot yes dist gaussian
+
 fix f1 all nvt temp ${temp} ${temp} 1000.0
+fix f2 all polir 2 1 0.42 0.96 0.0172 0.0296 0.471 1.365
 
 thermo 1
 thermo_style custom step temp press pe ebond ke 
@@ -30,7 +32,6 @@ dump_modify d1 unwrap yes
 
 dump d2 all custom 1 debug.info id type mol proc q 
 
-fix 1 all polir 2 1 0.42 0.96 0.0172 0.0296 0.471 1.365
 
 run 10
 quit
