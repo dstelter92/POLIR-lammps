@@ -66,7 +66,6 @@ ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg
 ComputePolirChargeAtom::~ComputePolirChargeAtom()
 {
   memory->destroy(qpolir);
-  memory->destroy(indx2bond);
   memory->destroy(qH);
   memory->destroy(qO);
 }
@@ -105,7 +104,6 @@ void ComputePolirChargeAtom::init()
 
   // memory init
   memory->create(qpolir,nmax,"POLIR/CHARGE/ATOM:qpolir");
-  memory->create(indx2bond,nmax,3,"POLIR/CHARGE/ATOM:indx2bond");
   memory->create(qH,nmax,"POLIR/CHARGE/ATOM:qH");
   memory->create(qO,nmax,"POLIR/CHARGE/ATOM:qO");
 }
@@ -158,7 +156,6 @@ void ComputePolirChargeAtom::compute_peratom()
 
   
   // loop over local atoms in this proc
-  // put lbond into array based on local atom index, indx2bond
   m = 0;
   for (i=0; i<nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;
@@ -184,16 +181,16 @@ void ComputePolirChargeAtom::compute_peratom()
             " an accurate LAMMPS data file with moleculeIDs is needed");
       }
 
-      double delx = x[i][0] - x[j][0];
-      double dely = x[i][1] - x[j][1];
-      double delz = x[i][2] - x[j][2];
-      domain->minimum_image(delx,dely,delz);
-      double rsq = delx*delx + dely*dely + delz*delz;
-      double r = sqrt(rsq);
+      if (POLIR_DEBUG) {
+        double delx = x[i][0] - x[j][0];
+        double dely = x[i][1] - x[j][1];
+        double delz = x[i][2] - x[j][2];
+        domain->minimum_image(delx,dely,delz);
+        double rsq = delx*delx + dely*dely + delz*delz;
+        double r = sqrt(rsq);
 
-      fprintf(screen,"proc%d lbond[%d]=%g (%d-%d), r=%g\n",me,m,lbond[m],i,j,r);
-      indx2bond[i][j] = lbond[m];
-      //indx2bond[j][i] = lbond[m];
+        fprintf(screen,"proc%d lbond[%d]=%g (%d-%d), r=%g\n",me,m,lbond[m],i,j,r);
+      }
       m++;
     }
 
@@ -248,11 +245,9 @@ void ComputePolirChargeAtom::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(qpolir);
-  memory->destroy(indx2bond);
   memory->destroy(qH);
   memory->destroy(qO);
   memory->create(qpolir,nmax,"POLIR/CHARGE/ATOM:qpolir");
-  memory->create(indx2bond,nmax,3,"POLIR/CHARGE/ATOM:indx2bond");
   memory->create(qH,nmax,"POLIR/CHARGE/ATOM:qH");
   memory->create(qO,nmax,"POLIR/CHARGE/ATOM:qO");
 }
