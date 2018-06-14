@@ -33,18 +33,18 @@ class ComputePolirChargeAtom : public Compute {
   double memory_usage();
 
  protected:
-
   int me,np;
-  int ifix;
-  int nmax;
+  int ifix,icompute;
+  int nmax,nbonds;
   int *typeH,*typeO;
   double *c1,*c3,*qeH,*reOH;
   double *qpolir;
-  double **roh;
+  double **indx2bond;
+  double *lbond;
   double *qH;
   double *qO;
 
-  char *fix_polir;
+  char *fix_polir,*compute_lbond;
   
   void allocate();
   
