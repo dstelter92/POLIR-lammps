@@ -31,7 +31,7 @@
 
 using namespace LAMMPS_NS;
 
-#define POLIR_DEBUG 0
+#define POLIR_DEBUG 1
 
 /* ---------------------------------------------------------------------- */
 
@@ -43,6 +43,7 @@ ComputePolirChargeAtom::ComputePolirChargeAtom(LAMMPS *lmp, int narg, char **arg
 
   peratom_flag = 1;
   size_peratom_cols = 0;
+  comm_forward = 1;
 
   // get parameters from input
   int len = strlen(arg[3])+1;
@@ -131,7 +132,10 @@ void ComputePolirChargeAtom::compute_peratom()
   double qh1,qh2,q;
   */
   int i,j,k,m,nb,j1,j2;
-  double qh1,qh2,q;
+  int partner,indx_p;
+  int ix,iy,iz;
+  double q_p;
+  double qh1,qh2,q,bond1,bond2;
 
   double **x = atom->x;
   int *type = atom->type;
@@ -172,61 +176,89 @@ void ComputePolirChargeAtom::compute_peratom()
           "the current group\n Use a proper 'group' with POLIR");
     }
 
+    bond1 = 0.0;
+    bond2 = 0.0;
+
     for (k=0; k<nb; k++) {
       j = atom->map(bond_atom[i][k]); 
 
       // sanity check, should be caught during 'molecular check above
       if (molid[i] != molid[j]) {
+        continue;
+        /*
         error->all(FLERR,"Atoms from same bond are not in same molecule,"
             " an accurate LAMMPS data file with moleculeIDs is needed");
+        */
       }
 
-      if (POLIR_DEBUG) {
-        double delx = x[i][0] - x[j][0];
-        double dely = x[i][1] - x[j][1];
-        double delz = x[i][2] - x[j][2];
-        domain->minimum_image(delx,dely,delz);
-        double rsq = delx*delx + dely*dely + delz*delz;
-        double r = sqrt(rsq);
-
-        fprintf(screen,"proc%d lbond[%d]=%g (%d-%d), r=%g\n",me,m,lbond[m],i,j,r);
+      if (bond1 == 0.0) {
+        bond1 = lbond[m];
+        j1 = atom->map(bond_atom[i][k]);
+        m++;
+        continue;
       }
-      m++;
+      if (bond2 == 0.0) {
+        bond2 = lbond[m];
+        j2 = atom->map(bond_atom[i][k]);
+        m++;
+        continue;
+      }
+      error->all(FLERR,"Expecting a maximum of 2 bonds per atom");
     }
 
-    if (type[i] == (*typeO)) {
-
-      // 2nd local index in first 2 bonds
-      j1 = atom->map(bond_atom[i][0]);
-      j2 = atom->map(bond_atom[i][1]);
+    if ((bond1 != 0.0) && (bond2 != 0.0)) {
 
       // calculate charges for all atoms in molecule
       qh1 = (*qeH);
-      qh1 += (*c1)*(lbond[m-1] + lbond[m-2] - (2*(*reOH)));
-      qh1 += (*c3)*(lbond[m-1] - lbond[m-2]);
+      qh1 += (*c1)*(bond1 + bond2 - (2*(*reOH)));
+      qh1 += (*c3)*(bond1 - bond2);
 
       qh2 = (*qeH);
-      qh2 += (*c1)*(lbond[m-1] + lbond[m-2] - (2*(*reOH)));
-      qh2 += (*c3)*(lbond[m-2] - lbond[m-1]);
+      qh2 += (*c1)*(bond1 + bond2 - (2*(*reOH)));
+      qh2 += (*c3)*(bond2 - bond1);
 
-      q = -(qh1 + qh2); // make negative later
+      q = -(qh1 + qh2); 
+
+      /*
+      // share this value with proc that owns j1/j2
+      partner = -1;
+      if (j1 > nlocal) // check if atom is ghost
+        partner = comm->coord2proc(x[j1],ix,iy,iz);
+
+      if (partner > 0) {
+        if (partner > me) {
+          MPI_Send(&qh1,1,MPI_DOUBLE,partner,0,world);
+          MPI_Send(&j1,1,MPI_INT,partner,1,world);
+          fprintf(screen,"proc%d sent %d qh1=%g and j1=%d\n",me,partner,qh1,j1);
+        }
+        else {
+          MPI_Recv(&q_p,1,MPI_DOUBLE,partner,0,world,MPI_STATUS_IGNORE);
+          MPI_Recv(&indx_p,1,MPI_INT,partner,0,world,MPI_STATUS_IGNORE);
+          fprintf(screen,"proc%d received qh1=%g and j1=%d\n",me,q_p,indx_p);
+        }
+      }
+      */
+      
+
 
       // Save to local charge array
       qO[i] = q;
       qH[j1] = qh1;
       qH[j2] = qh2;
 
+
       if (POLIR_DEBUG) {
-        fprintf(screen,"molid:%d proc:%d\n  lbond1[%d][%d]=%f lbond2[%d][%d]=%f\n  "
+        fprintf(screen,"molid:%d proc:%d\n  bond1=%f bond2=%f\n  "
             "q[%d]=%g qh1[%d]=%g qh2[%d]=%g\n",
-            molid[i],me,i,j1,lbond[m],i,j2,lbond[m-1],i,q,j1,qh1,j2,qh2);
+            molid[i],me,bond1,bond2,i,q,j1,qh1,j2,qh2);
       }
     }
   }
 
   // Make sure all procs know charges on H
+  // wont work, these arrays are local and will overwrite each other
   //MPI_Allreduce(MPI_IN_PLACE,qO,nmax,MPI_DOUBLE,MPI_MIN,world);
-  MPI_Allreduce(MPI_IN_PLACE,qH,nmax,MPI_DOUBLE,MPI_MAX,world);
+  //MPI_Allreduce(MPI_IN_PLACE,qH,nmax,MPI_DOUBLE,MPI_MAX,world);
 
   // construct peratom charge array
   for (i=0; i<nmax; i++) {
@@ -250,6 +282,46 @@ void ComputePolirChargeAtom::allocate()
   memory->create(qpolir,nmax,"POLIR/CHARGE/ATOM:qpolir");
   memory->create(qH,nmax,"POLIR/CHARGE/ATOM:qH");
   memory->create(qO,nmax,"POLIR/CHARGE/ATOM:qO");
+}
+
+/* ---------------------------------------------------------------------- */
+
+int ComputePolirChargeAtom::pack_forward_comm(int n, int *list, double *buf,
+                                            int pbc_flag, int *pbc)
+{
+  int i,j,m;
+
+  m = 0;
+  for (i=0; i<n; i++) {
+    j = list[i];
+    buf[m++] = qpolir[j];
+  }
+
+  return m;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ComputePolirChargeAtom::unpack_forward_comm(int n, int first, double *buf)
+{
+  int i,m,last;
+  int *type = atom->type;
+
+  m = 0;
+  last = first + n;
+  for (i=first; i<last; i++) {
+    double x = buf[m++];
+
+    // overwrite ghost IDs 
+    if (type[i] == (*typeO))
+      qpolir[i] = MIN(x,qpolir[i]);
+    else if (type[i] == (*typeH))
+      qpolir[i] = MAX(x,qpolir[i]);
+    else {
+      error->warning(FLERR,"unsupported atom type");
+      qpolir[i] = x;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

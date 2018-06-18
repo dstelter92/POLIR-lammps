@@ -30,6 +30,8 @@ class ComputePolirChargeAtom : public Compute {
   ~ComputePolirChargeAtom();
   void init();
   void compute_peratom();
+  int pack_forward_comm(int, int *, double *, int, int *);
+  void unpack_forward_comm(int, int, double *);
   double memory_usage();
 
  protected:
@@ -39,7 +41,6 @@ class ComputePolirChargeAtom : public Compute {
   int *typeH,*typeO;
   double *c1,*c3,*qeH,*reOH;
   double *qpolir;
-  double **indx2bond;
   double *lbond;
   double *qH;
   double *qO;
