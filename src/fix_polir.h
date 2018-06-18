@@ -37,11 +37,9 @@ class FixPolir : public Fix {
   void end_of_step();
   void allocate();
   double memory_usage();
+  void *extract(const char *, int &);
 
- private:
-  Compute *compute_pca;
-
- protected:
+  // INPUT VARIABLES
   int typeH;                        // type index of H
   int typeO;                        // type index of O
   double qeH;                       // equilibrium charge
@@ -51,6 +49,7 @@ class FixPolir : public Fix {
   double alphaH;                    // polarizibility for type H
   double alphaO;                    // polarizibility for type O
 
+  // POLIR PARAMETERS
   double c1;              // 1st coeff for charge-dep bonds
   double c3;              // 2nd coeff for charge-dep bonds
   double CD_intra_OH;     // Thole damping coeff, charge-dipole intramolecular O-H
@@ -61,14 +60,26 @@ class FixPolir : public Fix {
   double CD_inter;        // Thole damping coeff, charge-dipole intermolecular
   double DD_inter;        // Thole damping coeff, dipole-dipole intermolecular
   
+ private:
+  Compute *compute_pca;
+  Compute *compute_lbond;
+  Compute *compute_thole;
+
+ protected:
+  int me,nprocs;
+  int nlocal,nmax,npairs,nbonds,ndamp,count;
+
   int polir_output;
-  int q_compute_id;
-  char * id_q;
+  int compute_id;
+
+  char *id_q,*id_lbond,*id_thole;
+  char *stypeH,*stypeO,*sqeH,*sreOH,*suH,*suO,*salphaH,*salphaO;
 
   double *global_vector;
   double *charges;
+  double *lbond;
+  double **thole;
 
-  int me_universe,nworlds,iworld,me;
 };
 
 }

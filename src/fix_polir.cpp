@@ -43,7 +43,7 @@ using namespace FixConst;
 
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
-#define INVOKED_LOCAL 1
+#define INVOKED 1
 #define POLIR_DEBUG 1
 
 /* ---------------------------------------------------------------------- */
@@ -53,8 +53,9 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 {
   if (narg != 11) error->all(FLERR,"Illegal fix polir command");
 
-  local_flag = 1;
+  //local_flag = 1;
 
+  // fix/polir input variables
   typeH = force->inumeric(FLERR,arg[3]);  // atom type for H
   typeO = force->inumeric(FLERR,arg[4]);  // atom type for O
   qeH = force->numeric(FLERR,arg[5]);     // equilibrium charge on H
@@ -64,6 +65,23 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
   alphaH = force->numeric(FLERR,arg[9]);  // polarizibility for typeH
   alphaO = force->numeric(FLERR,arg[10]); // polarizibility for type0
 
+  // Constants 
+  // see fix_polir.h for details
+
+  // Thole damping parameters
+  // these are NOT inputs to fix/polir since they are constant
+  // in the model. Only requires small changes if the model is improved
+  CD_intra_OH = 0.650;
+  CD_intra_HH = 0.050;
+  DD_intra_OH = 0.690;
+  DD_intra_HH = 0.050;
+  CC_inter = 0.50;
+  CD_inter = 0.15;
+  DD_inter = 0.30;
+
+  // bond length coeff
+  c1 = 0.120;
+  c3 = -0.136;
 
   // Set output defaults
   polir_output = 0;
@@ -81,6 +99,10 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
 FixPolir::~FixPolir()
 {
   memory->destroy(charges);
+  memory->destroy(thole);
+  delete [] id_q;
+  delete [] id_thole;
+  //delete [] id_lbond;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,80 +122,106 @@ void FixPolir::init()
 {
   // Init stuff here...
   int i;
-  int nmax = atom->nmax;
+  nmax = atom->nmax;
+  count = 0;
 
-  // Constants... 
-  // see fix_polir.h for details
-
-  // bond length coeff
-  c1 = 0.120;
-  c3 = -0.136;
-
-  // Thole damping coeff
-  CD_intra_OH = 0.650;
-  CD_intra_HH = 0.050;
-  DD_intra_OH = 0.690;
-  DD_intra_HH = 0.050;
-  CC_inter = 0.50;
-  CD_inter = 0.15;
-  DD_inter = 0.30;
 
   // MPI init
-  me_universe = universe->me;
   MPI_Comm_rank(world,&me);
-  nworlds = universe->nworlds;
-  iworld = universe->iworld;
+  MPI_Comm_size(world,&nprocs);
   
   // memory management
   memory->create(charges,nmax,"polir:charges");
+  memory->create(thole,nmax,9,"polir:thole");
 
-  // Search for charge compute
-  q_compute_id = -1;
+
+  // Define computes needed for fix.
+  // Search for existing compute first, if not found, then create
+
+  // compute_bond_local
+  compute_id = -1;
   for (i=0; i<modify->ncompute; i++) {
-    if (strcmp(modify->compute[i]->style,"polir/charge/atom") == 0) {
-      q_compute_id = i;
+    if (strcmp(modify->compute[i]->style,"bond/local") == 0) {
+      compute_id = i;
       break;
     }
   }
   // If doesn't exist, create a new one
-  if (q_compute_id < 0) {
+  if (compute_id < 0) {
+    int n = strlen(id) + 4;
+    id_lbond = new char[n];
+    strcpy(id_lbond,id);
+    strcat(id_lbond,"_bond_local");
+
+    char **newarg = new char*[4];
+    newarg[0] = id_lbond;
+    newarg[1] = group->names[igroup];
+    newarg[2] = (char *) "bond/local";
+    newarg[3] = (char *) "dist";
+
+    modify->add_compute(4,newarg);
+    delete [] newarg;
+
+    compute_id = modify->ncompute - 1;
+  }
+  compute_lbond = modify->compute[compute_id];
+
+  // compute_polir_charge_atom
+  compute_id = -1;
+  for (i=0; i<modify->ncompute; i++) {
+    if (strcmp(modify->compute[i]->style,"POLIR/CHARGE/ATOM") == 0) {
+      compute_id = i;
+      break;
+    }
+  }
+  if (compute_id < 0) {
     int n = strlen(id) + 4;
     id_q = new char[n];
     strcpy(id_q,id);
     strcat(id_q,"_polir_charge_atom");
-    char param1[50];
-    snprintf(param1,50,"%d",typeH);
-    char param2[50];
-    snprintf(param2,50,"%d",typeO);
-    char param3[50];
-    snprintf(param3,50,"%f",qeH);
-    char param4[50];
-    snprintf(param4,50,"%f",reOH);
-    char param5[50];
-    snprintf(param5,50,"%f",c1);
-    char param6[50];
-    snprintf(param6,50,"%f",c3);
 
-    char **newarg = new char*[9];
+    char **newarg = new char*[5];
     newarg[0] = id_q;
     newarg[1] = group->names[igroup];
-    newarg[2] = (char *) "polir/charge/atom";
-    newarg[3] = param1;
-    newarg[4] = param2;
-    newarg[5] = param3;
-    newarg[6] = param4;
-    newarg[7] = param5;
-    newarg[8] = param6;
+    newarg[2] = (char *) "POLIR/CHARGE/ATOM";
+    newarg[3] = id; // tell polir/charge/atom id of this fix
+    newarg[4] = id_lbond; // tell polir/charge/atom id of bond/local compute
 
-    modify->add_compute(9,newarg);
+    modify->add_compute(5,newarg);
     delete [] newarg;
 
-    q_compute_id = modify->ncompute -1;
+    compute_id = modify->ncompute - 1;
   }
-  compute_pca = modify->compute[q_compute_id];
+  compute_pca = modify->compute[compute_id];
 
 
+  // compute_polir_thole_local
+  compute_id = -1;
+  for (i=0; i<modify->ncompute; i++) {
+    if (strcmp(modify->compute[i]->style,"POLIR/THOLE/LOCAL") == 0) {
+      compute_id = i;
+      break;
+    }
+  }
+  if (compute_id < 0) {
+    int n = strlen(id) + 4;
+    id_thole = new char[n];
+    strcpy(id_thole,id);
+    strcat(id_thole,"_polir_thole_local");
 
+    char **newarg = new char*[4];
+    newarg[0] = id_thole;
+    newarg[1] = group->names[igroup];
+    newarg[2] = (char *) "POLIR/THOLE/LOCAL";
+    newarg[3] = id;
+
+    modify->add_compute(4,newarg);
+    delete [] newarg;
+
+    compute_id = modify->ncompute - 1;
+  }
+  compute_thole = modify->compute[compute_id];
+  
 }
 
 /* ---------------------------------------------------------------------- */
@@ -183,8 +231,10 @@ void FixPolir::setup(int vflag)
   if (strstr(update->integrate_style,"verlet")) {
     post_force(vflag);
 
-    // Invoke compute to run on each step
-    compute_pca->invoked_flag |= INVOKED_LOCAL;
+    // Invoke all computes to run on each step
+    compute_lbond->invoked_flag |= INVOKED;
+    compute_pca->invoked_flag |= INVOKED;
+    compute_thole->invoked_flag |= INVOKED;
     modify->addstep_compute(update->ntimestep + 1);
   }
   else
@@ -202,37 +252,67 @@ void FixPolir::min_setup(int vflag)
 
 void FixPolir::pre_force(int vflag)
 {
-  int i;
   int *mask = atom->mask;
   int *tag = atom->tag;
-  int nlocal = atom->nlocal;
-  int nmax = atom->nmax;
+  double *q = atom->q;
+  int i;
 
-  // Re-calculate atomic charges, invoke per-atom fix
+  nlocal = atom->nlocal;
+
+  if (atom->nmax > nmax)
+    allocate();
+
+  // all procs compute their local bonds
+  compute_lbond->compute_local();
+
+  // all procs compute their bond-length dependent charges
   compute_pca->compute_peratom();
   charges = compute_pca->vector_atom;
-  /*
-   MPI_Allgather(charges,nmax,MPI_DOUBLE,global_vector,nmax*nworlds,
-      MPI_DOUBLE,world);
-  */
 
-  //fprintf(screen,"nlocal=%d\n",nlocal);
+  // set atomic charges
   for (i=0; i<nlocal; i++) {
     if (mask[i] & groupbit) {
-      fprintf(screen,"proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+      if (POLIR_DEBUG)
+        fprintf(screen,"CHARGE: proc:%d atom%d:%g\n",me,tag[i],charges[i]);
+      q[i] = charges[i];
     }
   }
-
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixPolir::post_force(int vflag)
 {
-  double **f = atom->f;
   int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-
+  int *tag = atom->tag;
+  double **f = atom->f;
+  int i,j,m,k;
+  
+  nlocal = atom->nlocal;
+  
+  if (atom->nmax > nmax)
+    allocate();
+  
+  compute_thole->compute_local();
+  thole = compute_thole->array_local;
+  npairs = compute_thole->size_local_rows;
+  ndamp = compute_thole->size_local_cols - 2;
+  
+  /*
+  for (m=0; m<npairs; m++) {
+    i = thole[m][0];
+    j = thole[m][1];
+    if (!((mask[i] & groupbit) && (mask[j] & groupbit))) continue;
+    if (POLIR_DEBUG)
+      fprintf(screen,"THOLE: proc:%d pair%d-%d:\n  ",me,tag[i],tag[j]);
+    for (k=0; k<ndamp; k++) {
+      if (POLIR_DEBUG)
+        fprintf(screen,"t[%d]=%g  ",k,thole[m][k+2]);
+    }
+    if (POLIR_DEBUG)
+      fprintf(screen,"\n");
+  }
+  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -241,6 +321,7 @@ void FixPolir::end_of_step()
 {
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  count++;
 
 }
 
@@ -248,17 +329,69 @@ void FixPolir::end_of_step()
 
 void FixPolir::allocate()
 {
-  int nmax = atom->nmax;
+  nmax = atom->nmax;
   memory->destroy(charges);
+  memory->destroy(thole);
   memory->create(charges,nmax,"polir:charges");
+  memory->create(thole,nmax,9,"polir:thole");
 }
 
 /* ---------------------------------------------------------------------- */
 
 double FixPolir::memory_usage()
 {
-  int nmax = atom->nmax;
-  double bytes = nmax*1 * sizeof(double);
-  bytes += nmax*nworlds*1 * sizeof(double);
+  nmax = atom->nmax;
+  double bytes = nmax*8 * sizeof(double);
   return bytes;
+}
+
+/* -------------------------------------------------------------------------
+   extract input parameters and defined constants from Fix
+------------------------------------------------------------------------- */
+
+void *FixPolir::extract(const char *str, int &dim)
+{
+  dim=0;
+
+  // input parameters
+  if (strcmp(str,"typeH") == 0)
+    return &typeH;
+  else if (strcmp(str,"typeO") == 0)
+    return &typeO;
+  else if (strcmp(str,"qeH") == 0)
+    return &qeH;
+  else if (strcmp(str,"reOH") == 0)
+    return &reOH;
+  else if (strcmp(str,"uH") == 0)
+    return &uH;
+  else if (strcmp(str,"uO") == 0)
+    return &uO;
+  else if (strcmp(str,"alphaH") == 0)
+    return &alphaH;
+  else if (strcmp(str,"alphaO") == 0)
+    return &alphaO;
+
+  // return POLIR specific constants
+  else if (strcmp(str,"c1") == 0)
+    return &c1;
+  else if (strcmp(str,"c3") == 0)
+    return &c3;
+  else if (strcmp(str,"CD_intra_OH") == 0)
+    return &CD_intra_OH;
+  else if (strcmp(str,"CD_intra_HH") == 0)
+    return &CD_intra_HH;
+  else if (strcmp(str,"DD_intra_OH") == 0)
+    return &DD_intra_OH;
+  else if (strcmp(str,"DD_intra_HH") == 0)
+    return &DD_intra_HH;
+  else if (strcmp(str,"CC_inter") == 0)
+    return &CC_inter;
+  else if (strcmp(str,"CD_inter") == 0)
+    return &CD_inter;
+  else if (strcmp(str,"DD_inter") == 0)
+    return &DD_inter;
+  else
+    error->all(FLERR,"Invalid input, no such variable to extract");
+
+  return NULL;
 }

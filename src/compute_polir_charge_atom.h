@@ -13,7 +13,7 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(polir/charge/atom,ComputePolirChargeAtom)
+ComputeStyle(POLIR/CHARGE/ATOM,ComputePolirChargeAtom)
 
 #else
 
@@ -29,20 +29,26 @@ class ComputePolirChargeAtom : public Compute {
   ComputePolirChargeAtom(class LAMMPS *, int, char **);
   ~ComputePolirChargeAtom();
   void init();
-  void init_list(int, class NeighList *);
   void compute_peratom();
-  void allocate();
+  int pack_forward_comm(int, int *, double *, int, int *);
+  void unpack_forward_comm(int, int, double *);
   double memory_usage();
 
- private:
-  class NeighList *list;
+ protected:
   int me,np;
-  int nmax,typeH,typeO;
-  double c1,c3,qeH,reOH;
+  int ifix,icompute;
+  int nmax,nbonds;
+  int *typeH,*typeO;
+  double *c1,*c3,*qeH,*reOH;
   double *qpolir;
+  double *lbond;
   double *qH;
   double *qO;
-  double **roh;
+
+  char *fix_polir,*compute_lbond;
+  
+  void allocate();
+  
 };
 
 }
