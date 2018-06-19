@@ -31,7 +31,7 @@
 
 using namespace LAMMPS_NS;
 
-#define POLIR_DEBUG 1
+#define POLIR_DEBUG 0
 
 /* ---------------------------------------------------------------------- */
 

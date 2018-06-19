@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <cmath>
 #include <cstring>
+#include <boost/math/special_functions/gamma.hpp>
 #include "compute_polir_thole_local.h"
 #include "fix_polir.h"
 #include "atom.h"
@@ -100,6 +100,8 @@ void ComputePolirTholeLocal::init()
   CD_inter = (double *)modify->fix[ifix]->extract("CD_inter",dim);
   DD_inter = (double *)modify->fix[ifix]->extract("DD_inter",dim);
 
+  gam = boost::math::tgamma(0.75);
+
   // put constants into array
   damping[0] = *CD_intra_OH;
   damping[1] = *CD_intra_HH;
@@ -147,7 +149,7 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
   int ii,jj,m,i,j,k;
   double alphai,alphaj;
   double delx,dely,delz,rsq,r;
-  double t1,t2,ra4,ra;
+  double t1,t2,ra4,ra,igam;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -208,9 +210,9 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
         thole[m][0] = i;
         thole[m][1] = j;
         for (k=2; k<nvalues; k++) {
-          t1 = exp(-damping[k-1]*ra4);
-          t2 = pow(damping[k-1],1/4)*ra*0;
-          //*gamma(3/4)*gsl_sf_gamma_inc(3/4,damping[k-1]*ra4); // for now no gamma fctn implemented
+          t1 = exp(-damping[k-2]*ra4);
+          igam = boost::math::gamma_q(0.75,damping[k-2]*ra4);
+          t2 = pow(damping[k-2],1/4)*ra*gam*igam;
         
           thole[m][k] = (1 - t1 + t2) / r;
 
