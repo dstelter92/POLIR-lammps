@@ -11,6 +11,8 @@ This code is an unfinished WIP and is not guarenteed to work. Updates will be
 put here as they happen.
 
 6/5/18 - Initial Commit, only Bond & Pair potential implemented.
+6/19/18 - POLIR fix started, only thole smearing and bond-length dependent
+charges are implemented
 
 ## Install
 
@@ -21,6 +23,17 @@ then re-compile LAMMPS.
 
 
 ## src/
+
+fix_polir is the main fix associated with POLIR. It (will) handle computation of
+the induced dipole loop as well as hooks to all the needed helper-computes
+
+compute_polir_charge_atom (polir/charge/atom) computes the bond-length dependent
+charges on each atom, currently this part of the code is the limitation for 1
+MPI rank. Custom communication is needed
+
+compute_polir_tholer_local (polir/thole/local) computes the pairwise thole-smear
+charge damping coeffs for each atom pair and charge-charge, charge-dipole, or
+dipole-dipole interaction
 
 pair_polir_vdw (polir/vdw) is the pairwise O-O potential to attract waters, all other nonbonded
 interactions are electrostatic
