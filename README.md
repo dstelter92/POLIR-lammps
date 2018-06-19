@@ -14,7 +14,8 @@ put here as they happen.
 
 ## Install
 
-`cp src/* /path/to/lammps/src/`
+    git clone https://github.com/dstelter92/POLIR-lammps.git
+    cp POLIR-lammps/src/* /path/to/lammps/src/
 
 then re-compile LAMMPS.
 
@@ -30,11 +31,9 @@ tabulated file is found in the examples directory as "PS_bond_potential.table"
 
 ## To-Do list:
 
-[ ] Implement electrostatics with Thole damping as fix
-
-[ ] Implement electrostatics with MPI
-
-[ ] Test against previous work
+- [ ] Implement electrostatics with Thole damping as fix
+- [ ] Implement electrostatics with MPI
+- [ ] Test against previous work
 
 
 
