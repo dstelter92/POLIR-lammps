@@ -80,7 +80,7 @@ void ComputePolirTholeLocal::init()
   neighbor->requests[irequest]->full = 1;
   neighbor->requests[irequest]->occasional = 1;
   
-  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
+  memory->create(thole,nmax,(nvalues-2)*4+2,"POLIR/THOLE/LOCAL:thole");
   memory->create(damping,nvalues-2,"POLIR/THOLE/LOCAL:damping");
 
   // find polir fix
@@ -140,16 +140,18 @@ void ComputePolirTholeLocal::compute_local()
 
 }
 
+/* ---------------------------------------------------------------------- */
+
 int ComputePolirTholeLocal::compute_pairs(int flag)
 {
   // invoke neighbor list build/copy as occasional
   if (flag == 0)
     neighbor->build_one(list);
 
-  int ii,jj,m,i,j,k;
+  int ii,jj,m,i,j,k,n;
   double alphai,alphaj;
   double delx,dely,delz,rsq,r;
-  double t1,t2,ra4,ra,igam;
+  double ra,ra4,rr,rr2,rr3,rr4,expfac,a14,igam;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -202,19 +204,38 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
 
         // other constants
         ra = (r / A_const);
-        ra4 = pow(r,4);
+        ra4 = pow(ra,4);
+        rr = 1 / r;
+        rr2 = rr * rr;
+        rr3 = rr2 * rr;
+        rr4 = rr2 * rr2;
 
         if (POLIR_DEBUG)
           fprintf(screen,"thole for pair%d (%d-%d) r=%g:\n  ",m,i,j,r);
 
         thole[m][0] = i;
         thole[m][1] = j;
-        for (k=2; k<nvalues; k++) {
-          t1 = exp(-damping[k-2]*ra4);
-          igam = boost::math::gamma_q(0.75,damping[k-2]*ra4);
-          t2 = pow(damping[k-2],1/4)*ra*gam*igam;
-        
-          thole[m][k] = (1 - t1 + t2) / r;
+        for (k=0; k<nvalues-2; k++) {
+          n = k + 4*k + 2;
+          // compute all derivs for all types, compute extra derivs to determine
+          // forces later
+          expfac = exp(-damping[k]*ra4);
+          a14 = pow(damping[k],1/4);
+          igam = boost::math::gamma_q(0.75,damping[k]*ra4);
+
+          // 1st derive
+          thole[m][k] = (1.0 - expfac);
+          thole[m][k] += a14*ra*gam*igam;
+          // 2nd, ignore gamma fctn term, paper does this but IDK why as of
+          // 6/20/18. It's also like this in the old fortran code...
+          // keep it for now..
+          thole[m][k+1] = rr2 * (-1*(1.0 - expfac));
+          // 3rd
+          thole[m][k+2] = rr3 * ((-4*ra4*damping[k]*expfac) + (2*(1.0 - expfac)));
+          // 4th
+          thole[m][k+3] = rr4 * (-6*(1.0 - expfac) + (-4*ra4*damping[k]*expfac)
+              + (16*damping[k]*damping[k]*ra4*ra4*expfac));
+
 
           if (POLIR_DEBUG)
             fprintf(screen,"t[%d]=%g  ",k,thole[m][k]);
@@ -235,7 +256,7 @@ void ComputePolirTholeLocal::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(thole);
-  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
+  memory->create(thole,nmax,(nvalues-2)*4+2,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ----------------------------------------------------------------------
