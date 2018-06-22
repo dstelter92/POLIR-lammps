@@ -224,16 +224,16 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
           a14 = pow(damping[k],1/4);
           igam = boost::math::gamma_q(0.75,damping[k]*ra4);
 
-          // 1st derive
+          // 0th derive
           thole[m][n] = (1.0 - expfac);
           thole[m][n] += a14*ra*gam*igam;
-          // 2nd, ignore gamma fctn term, paper does this but IDK why as of
+          // 1st, ignore gamma fctn term, paper does this but IDK why as of
           // 6/20/18. It's also like this in the old fortran code...
           // keep it for now..
           thole[m][n+1] = rr2 * (-1*(1.0 - expfac));
-          // 3rd
+          // 2nd
           thole[m][n+2] = rr3 * ((-4*ra4*damping[k]*expfac) + (2*(1.0 - expfac)));
-          // 4th
+          // 3rd
           thole[m][n+3] = rr4 * (-6*(1.0 - expfac) + (-4*ra4*damping[k]*expfac)
               + (16*damping[k]*damping[k]*ra4*ra4*expfac));
 

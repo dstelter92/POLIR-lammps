@@ -78,6 +78,7 @@ FixPolir::FixPolir(LAMMPS *lmp, int narg, char **arg) :
   CC_inter = 0.50;
   CD_inter = 0.15;
   DD_inter = 0.30;
+  ndamp = 7;
 
   // bond length coeff
   c1 = 0.120;
@@ -132,7 +133,7 @@ void FixPolir::init()
   
   // memory management
   memory->create(charges,nmax,"polir:charges");
-  memory->create(thole,nmax,9,"polir:thole");
+  memory->create(thole,nmax,30,"polir:thole");
 
 
   // Define computes needed for fix.
@@ -260,7 +261,7 @@ void FixPolir::pre_force(int vflag)
   nlocal = atom->nlocal;
 
   if (atom->nmax > nmax)
-    allocate();
+    allocate(1);
 
   // all procs compute their local bonds
   compute_lbond->compute_local();
@@ -270,6 +271,7 @@ void FixPolir::pre_force(int vflag)
   charges = compute_pca->vector_atom;
 
   // set atomic charges
+  /*
   for (i=0; i<nlocal; i++) {
     if (mask[i] & groupbit) {
       if (POLIR_DEBUG)
@@ -277,6 +279,7 @@ void FixPolir::pre_force(int vflag)
       q[i] = charges[i];
     }
   }
+  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -291,28 +294,31 @@ void FixPolir::post_force(int vflag)
   nlocal = atom->nlocal;
   
   if (atom->nmax > nmax)
-    allocate();
+    allocate(2);
   
   compute_thole->compute_local();
-  thole = compute_thole->array_local;
   npairs = compute_thole->size_local_rows;
-  ndamp = compute_thole->size_local_cols - 2;
+  nthole = compute_thole->size_local_cols;
+  thole = compute_thole->array_local;
   
-  /*
   for (m=0; m<npairs; m++) {
-    i = thole[m][0];
-    j = thole[m][1];
+
+    i = thole[m][0]; // local indx1
+    j = thole[m][1]; // local indx2
+
     if (!((mask[i] & groupbit) && (mask[j] & groupbit))) continue;
+
     if (POLIR_DEBUG)
       fprintf(screen,"THOLE: proc:%d pair%d-%d:\n  ",me,tag[i],tag[j]);
-    for (k=0; k<ndamp; k++) {
+
+    // print CD OH intermolecular thole
+    for (k=3; k<7; k++) {
       if (POLIR_DEBUG)
-        fprintf(screen,"t[%d]=%g  ",k,thole[m][k+2]);
+        fprintf(screen,"t[%d]=%g  ",k,thole[m][k]);
     }
     if (POLIR_DEBUG)
       fprintf(screen,"\n");
   }
-  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -327,13 +333,22 @@ void FixPolir::end_of_step()
 
 /* ---------------------------------------------------------------------- */
 
-void FixPolir::allocate()
+void FixPolir::allocate(int flag)
 {
+  // flag determines which arrays get allocated
   nmax = atom->nmax;
-  memory->destroy(charges);
-  memory->destroy(thole);
-  memory->create(charges,nmax,"polir:charges");
-  memory->create(thole,nmax,9,"polir:thole");
+  if (flag == 1) {
+    // Allocate pre-force arrays
+    memory->destroy(charges);
+    memory->create(charges,nmax,"polir:charges");
+  }
+  else if (flag == 2) {
+    // Allocate post-force arrays
+    memory->destroy(thole);
+    memory->create(thole,nmax,30,"polir:thole");
+  }
+  else
+    error->all(FLERR,"Invalid memory allocation flag");
 }
 
 /* ---------------------------------------------------------------------- */

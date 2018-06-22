@@ -35,7 +35,7 @@ class FixPolir : public Fix {
   void pre_force(int);
   void post_force(int);
   void end_of_step();
-  void allocate();
+  void allocate(int);
   double memory_usage();
   void *extract(const char *, int &);
 
@@ -66,8 +66,10 @@ class FixPolir : public Fix {
   Compute *compute_thole;
 
  protected:
+  bigint count,iter;
   int me,nprocs;
-  int nlocal,nmax,npairs,nbonds,ndamp,count;
+  int nlocal,nmax,npairs,nbonds,ndamp;
+  int nthole;
 
   int polir_output;
   int compute_id;
