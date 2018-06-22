@@ -36,7 +36,7 @@ class ComputePolirTholeLocal : public Compute {
 
  private:
   class NeighList *list;
-  int nvalues,npairs,nmax,inum;
+  int nvalues,npairs,nmax,inum,ndamp;
   int *ilist;
   double A_const,alphaH,alphaO,gam;
 

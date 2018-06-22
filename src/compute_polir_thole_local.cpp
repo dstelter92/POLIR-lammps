@@ -37,8 +37,9 @@ ComputePolirTholeLocal::ComputePolirTholeLocal(LAMMPS *lmp, int narg, char **arg
   Compute(lmp, narg-1, arg),
   list(NULL)
 {
-  // default calculate all values (7) of thole potential for all local pairs
-  nvalues = 9; 
+  // default calculate all values (30) of thole potential for all local pairs
+  nvalues = 2 + (7*4);
+  ndamp = 7;
 
   local_flag = 1;
   size_local_cols = nvalues;
@@ -80,8 +81,8 @@ void ComputePolirTholeLocal::init()
   neighbor->requests[irequest]->full = 1;
   neighbor->requests[irequest]->occasional = 1;
   
-  memory->create(thole,nmax,(nvalues-2)*4+2,"POLIR/THOLE/LOCAL:thole");
-  memory->create(damping,nvalues-2,"POLIR/THOLE/LOCAL:damping");
+  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
+  memory->create(damping,7,"POLIR/THOLE/LOCAL:damping");
 
   // find polir fix
   int ifix = modify->find_fix(fix_polir);
@@ -215,8 +216,8 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
 
         thole[m][0] = i;
         thole[m][1] = j;
-        for (k=0; k<nvalues-2; k++) {
-          n = k + 4*k + 2;
+        for (k=0; k<ndamp; k++) {
+          n = 4*k + 2;
           // compute all derivs for all types, compute extra derivs to determine
           // forces later
           expfac = exp(-damping[k]*ra4);
@@ -224,16 +225,16 @@ int ComputePolirTholeLocal::compute_pairs(int flag)
           igam = boost::math::gamma_q(0.75,damping[k]*ra4);
 
           // 1st derive
-          thole[m][k] = (1.0 - expfac);
-          thole[m][k] += a14*ra*gam*igam;
+          thole[m][n] = (1.0 - expfac);
+          thole[m][n] += a14*ra*gam*igam;
           // 2nd, ignore gamma fctn term, paper does this but IDK why as of
           // 6/20/18. It's also like this in the old fortran code...
           // keep it for now..
-          thole[m][k+1] = rr2 * (-1*(1.0 - expfac));
+          thole[m][n+1] = rr2 * (-1*(1.0 - expfac));
           // 3rd
-          thole[m][k+2] = rr3 * ((-4*ra4*damping[k]*expfac) + (2*(1.0 - expfac)));
+          thole[m][n+2] = rr3 * ((-4*ra4*damping[k]*expfac) + (2*(1.0 - expfac)));
           // 4th
-          thole[m][k+3] = rr4 * (-6*(1.0 - expfac) + (-4*ra4*damping[k]*expfac)
+          thole[m][n+3] = rr4 * (-6*(1.0 - expfac) + (-4*ra4*damping[k]*expfac)
               + (16*damping[k]*damping[k]*ra4*ra4*expfac));
 
 
@@ -256,7 +257,7 @@ void ComputePolirTholeLocal::allocate()
 {
   nmax = atom->nmax;
   memory->destroy(thole);
-  memory->create(thole,nmax,(nvalues-2)*4+2,"POLIR/THOLE/LOCAL:thole");
+  memory->create(thole,nmax,nvalues,"POLIR/THOLE/LOCAL:thole");
 }
 
 /* ----------------------------------------------------------------------
