@@ -69,7 +69,7 @@ Neighbor list info ...
       pair build: full/bin
       stencil: full/bin/3d
       bin: standard
-Per MPI rank memory allocation (min/avg/max) = 9.853 | 9.853 | 9.853 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 12.48 | 12.48 | 12.48 Mbytes
 Step Temp Press PotEng E_bond KinEng 
        0          300    -59573.38   0.60257214   0.60313839    4.4712151 
        1    220.60449   -124614.14    2.3802419    2.3808083    3.2879004 
@@ -82,21 +82,21 @@ Step Temp Press PotEng E_bond KinEng
        8    297.20898    84188.241   0.72609472   0.72666852    4.4296176 
        9    234.63379     126992.7    2.1373616     2.137937    3.4969938 
       10    303.73634   -9128.1156   0.49091243   0.49149051    4.5269017 
-Loop time of 0.00153399 on 1 procs for 10 steps with 6 atoms
+Loop time of 0.0104289 on 1 procs for 10 steps with 6 atoms
 
-Performance: 563.239 ns/day, 0.043 hours/ns, 6518.968 timesteps/s
-0.0% CPU use with 1 MPI tasks x no OpenMP threads
+Performance: 82.847 ns/day, 0.290 hours/ns, 958.873 timesteps/s
+76.7% CPU use with 1 MPI tasks x no OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 0.00051451 | 0.00051451 | 0.00051451 |   0.0 | 33.54
-Bond    | 3.0994e-06 | 3.0994e-06 | 3.0994e-06 |   0.0 |  0.20
-Neigh   | 4.6015e-05 | 4.6015e-05 | 4.6015e-05 |   0.0 |  3.00
-Comm    | 6.5088e-05 | 6.5088e-05 | 6.5088e-05 |   0.0 |  4.24
-Output  | 0.00020885 | 0.00020885 | 0.00020885 |   0.0 | 13.62
-Modify  | 0.00068736 | 0.00068736 | 0.00068736 |   0.0 | 44.81
-Other   |            | 9.06e-06   |            |       |  0.59
+Pair    | 0.0010297  | 0.0010297  | 0.0010297  |   0.0 |  9.87
+Bond    | 8.3447e-06 | 8.3447e-06 | 8.3447e-06 |   0.0 |  0.08
+Neigh   | 8.8215e-05 | 8.8215e-05 | 8.8215e-05 |   0.0 |  0.85
+Comm    | 0.00019145 | 0.00019145 | 0.00019145 |   0.0 |  1.84
+Output  | 0.0005064  | 0.0005064  | 0.0005064  |   0.0 |  4.86
+Modify  | 0.0085778  | 0.0085778  | 0.0085778  |   0.0 | 82.25
+Other   |            | 2.694e-05  |            |       |  0.26
 
 Nlocal:    6 ave 6 max 6 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
